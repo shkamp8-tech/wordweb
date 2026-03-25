@@ -1,0 +1,1938 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Wordweb — Design Academy Eindhoven</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=Space+Grotesk:wght@300;400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
+<script src="https://cdn.jsdelivr.net/npm/fuse.js@7.0.0"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<style>
+:root {
+  --bg: #0a0a0f; --bg2: #111118; --bg3: #1a1a24;
+  --glass: rgba(17,17,24,0.88); --text: #f0f0f5; --text2: #9ca3af; --text3: #6b7280;
+  --border: rgba(255,255,255,0.08); --border2: rgba(255,255,255,0.15);
+  --accent: #3b82f6; --glow: rgba(59,130,246,0.3);
+  --r: 12px; --t: 0.3s cubic-bezier(0.4,0,0.2,1);
+}
+[data-theme="light"] {
+  --bg: #f5f0eb; --bg2: #fff; --bg3: #f0ebe5;
+  --glass: rgba(255,255,255,0.88); --text: #1a1a2e; --text2: #4b5563; --text3: #9ca3af;
+  --border: rgba(0,0,0,0.08); --border2: rgba(0,0,0,0.15);
+  --accent: #2563eb; --glow: rgba(37,99,235,0.2);
+}
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+html,body{height:100%;overflow:hidden;font-family:'Space Grotesk',sans-serif;background:var(--bg);color:var(--text);transition:background var(--t),color var(--t)}
+::selection{background:var(--accent);color:#fff}
+::-webkit-scrollbar{width:5px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px}
+
+.app{display:grid;grid-template-columns:auto 1fr auto;grid-template-rows:auto 1fr;height:100vh;width:100vw}
+
+/* TOPBAR */
+.topbar{grid-column:1/-1;display:flex;align-items:center;gap:10px;padding:10px 16px;background:var(--glass);backdrop-filter:blur(20px);border-bottom:1px solid var(--border);z-index:100}
+.logo{font-family:'Syne',sans-serif;font-weight:800;font-size:20px;letter-spacing:-0.5px;background:linear-gradient(135deg,var(--accent),#ec4899);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin-right:6px;white-space:nowrap}
+.search-wrap{flex:1;max-width:380px;position:relative}
+.search-input{width:100%;padding:8px 14px 8px 34px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--r);color:var(--text);font-family:inherit;font-size:13px;outline:none;transition:border-color var(--t),box-shadow var(--t)}
+.search-input:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--glow)}
+.search-icon{position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--text3);font-size:13px;pointer-events:none}
+.search-results{position:absolute;top:calc(100% + 4px);left:0;right:0;background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);max-height:280px;overflow-y:auto;box-shadow:0 12px 40px rgba(0,0,0,0.4);display:none;z-index:200}
+.search-results.show{display:block;animation:fadeIn .15s ease}
+.sr-item{padding:8px 14px;cursor:pointer;display:flex;align-items:center;gap:8px;border-bottom:1px solid var(--border);transition:background .15s}
+.sr-item:hover{background:var(--bg3)}
+.sr-type{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;padding:2px 7px;border-radius:4px;color:#fff;flex-shrink:0}
+.sr-title{font-size:13px;font-weight:500}
+.actions{display:flex;align-items:center;gap:5px;margin-left:auto}
+.btn{display:inline-flex;align-items:center;gap:5px;padding:7px 12px;border:1px solid var(--border);border-radius:8px;background:var(--bg3);color:var(--text);font-family:inherit;font-size:12px;font-weight:500;cursor:pointer;transition:all var(--t);white-space:nowrap}
+.btn:hover{border-color:var(--border2);background:var(--bg2);transform:translateY(-1px)}
+.btn.on{border-color:var(--accent);background:rgba(59,130,246,.1);color:var(--accent)}
+.btn-i{width:32px;height:32px;padding:0;display:flex;align-items:center;justify-content:center;border-radius:8px;font-size:15px}
+.dd{position:relative}.dd-menu{position:absolute;top:calc(100% + 4px);right:0;background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);box-shadow:0 12px 40px rgba(0,0,0,0.4);min-width:160px;display:none;z-index:200;overflow:hidden}
+.dd-menu.show{display:block;animation:fadeIn .15s ease}
+.dd-item{padding:9px 14px;cursor:pointer;font-size:12px;display:flex;align-items:center;gap:7px;transition:background .15s}
+.dd-item:hover{background:var(--bg3)}
+
+/* SIDEBAR */
+.sidebar{grid-column:1;grid-row:2;width:260px;background:var(--glass);backdrop-filter:blur(20px);border-right:1px solid var(--border);overflow-y:auto;padding:14px;z-index:90;transition:width var(--t),padding var(--t),opacity var(--t)}
+.sidebar.hide{width:0;padding:0;overflow:hidden;opacity:0;pointer-events:none}
+.sb-title{font-family:'Syne',sans-serif;font-weight:700;font-size:10px;text-transform:uppercase;letter-spacing:1.5px;color:var(--text3);margin:12px 0 8px}
+.sb-title:first-child{margin-top:0}
+.f-btn{width:100%;text-align:left;padding:8px 10px;margin-bottom:3px;background:0;border:1px solid transparent;border-radius:8px;color:var(--text2);font-family:inherit;font-size:12px;font-weight:500;cursor:pointer;transition:all var(--t);display:flex;align-items:center;gap:7px}
+.f-btn:hover{background:var(--bg3);color:var(--text)}
+.f-btn.on{background:rgba(59,130,246,.1);border-color:var(--accent);color:var(--accent)}
+.dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+.legend{margin-top:8px;padding-top:8px;border-top:1px solid var(--border)}
+.lg-item{display:flex;align-items:center;gap:7px;padding:3px 0;font-size:11px;color:var(--text2)}
+.lg-color{width:10px;height:10px;border-radius:3px;flex-shrink:0}
+.stats{display:flex;gap:10px;padding:8px 0}
+.stat{text-align:center;flex:1}.stat-n{font-family:'Syne';font-weight:800;font-size:18px;color:var(--accent)}.stat-l{font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px}
+.slider-g{margin-top:8px}.slider-l{font-size:11px;color:var(--text2);margin-bottom:4px;display:flex;justify-content:space-between}
+.slider{width:100%;-webkit-appearance:none;appearance:none;height:3px;background:var(--bg3);border-radius:2px;outline:none}
+.slider::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:14px;height:14px;background:var(--accent);border-radius:50%;cursor:pointer;box-shadow:0 0 6px var(--glow)}
+.smart-info{margin-top:10px;padding:10px;background:var(--bg3);border-radius:8px;border:1px solid var(--border);font-size:11px;line-height:1.4;color:var(--text2);display:none}
+.smart-info.show{display:block;animation:fadeIn .2s ease}
+.smart-info h4{font-family:'Syne';font-weight:700;font-size:12px;color:var(--text);margin-bottom:5px}
+.sg-item{padding:6px 0;border-bottom:1px solid var(--border)}.sg-item:last-child{border-bottom:0}
+.sg-name{font-weight:600;color:var(--text);display:flex;align-items:center;gap:5px;font-size:12px}
+.sg-explain{font-size:10px;color:var(--text3);margin-top:3px;line-height:1.3}
+
+/* GRAPH */
+.graph{grid-column:2;grid-row:2;position:relative;overflow:hidden;background:var(--bg);transition:background var(--t)}
+[data-theme="dark"] .graph{background-image:radial-gradient(rgba(255,255,255,.03) 1px,transparent 1px);background-size:24px 24px}
+[data-theme="light"] .graph{background-image:radial-gradient(rgba(0,0,0,.04) 1px,transparent 1px);background-size:24px 24px}
+.graph svg{width:100%;height:100%;cursor:grab}
+.graph svg:active{cursor:grabbing}
+
+/* DETAIL */
+.detail{grid-column:3;grid-row:2;width:0;background:var(--glass);backdrop-filter:blur(20px);border-left:1px solid var(--border);overflow-y:auto;overflow-x:hidden;transition:width var(--t);z-index:90}
+.detail.open{width:320px}
+.detail-inner{padding:18px;min-width:290px}
+.d-close{position:absolute;top:14px;right:14px;background:var(--bg3);border:1px solid var(--border);color:var(--text2);width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:13px;transition:all var(--t)}
+.d-close:hover{background:var(--accent);color:#fff;border-color:var(--accent)}
+.d-badge{display:inline-block;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;padding:3px 9px;border-radius:4px;color:#fff;margin-bottom:10px}
+.d-title{font-family:'Syne';font-weight:800;font-size:20px;line-height:1.2;margin-bottom:10px}
+.d-desc{font-size:13px;line-height:1.5;color:var(--text2);margin-bottom:14px}
+.d-meta{display:grid;grid-template-columns:auto 1fr;gap:4px 10px;font-size:12px;margin-bottom:14px}
+.d-ml{color:var(--text3);font-weight:500}.d-mv{color:var(--text)}
+.d-tags{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:14px}
+.tag{padding:2px 8px;background:var(--bg3);border:1px solid var(--border);border-radius:16px;font-size:10px;font-family:'Space Mono';color:var(--text2);transition:all var(--t);cursor:default}
+.tag:hover{border-color:var(--accent);color:var(--accent)}
+.d-ct{font-family:'Syne';font-weight:700;font-size:10px;text-transform:uppercase;letter-spacing:1px;color:var(--text3);margin-bottom:6px}
+.d-conn{padding:5px 9px;margin-bottom:3px;background:var(--bg3);border-radius:6px;font-size:12px;cursor:pointer;transition:all var(--t);display:flex;align-items:center;gap:7px}
+.d-conn:hover{background:var(--accent);color:#fff;transform:translateX(3px)}
+
+/* TOOLTIP */
+.tip{position:fixed;pointer-events:none;background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:7px 11px;box-shadow:0 8px 24px rgba(0,0,0,0.3);z-index:500;opacity:0;transition:opacity .12s;max-width:240px}
+.tip.show{opacity:1}
+.tip-t{font-weight:600;font-size:12px;margin-bottom:1px}.tip-y{font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px}
+.tip-d{font-size:10px;color:var(--text2);margin-top:3px;line-height:1.3}
+
+/* MODAL */
+.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.6);backdrop-filter:blur(4px);z-index:1000;display:none;align-items:center;justify-content:center}
+.modal-bg.show{display:flex;animation:fadeIn .15s ease}
+.modal{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);box-shadow:0 16px 48px rgba(0,0,0,0.5);width:90%;max-width:480px;max-height:80vh;overflow-y:auto;animation:modalIn .25s cubic-bezier(.34,1.56,.64,1)}
+.m-head{display:flex;align-items:center;justify-content:space-between;padding:16px 20px 10px;border-bottom:1px solid var(--border)}
+.m-title{font-family:'Syne';font-weight:800;font-size:16px}
+.m-close{background:0;border:0;color:var(--text3);font-size:18px;cursor:pointer;padding:3px;transition:color var(--t)}.m-close:hover{color:var(--text)}
+.m-body{padding:16px 20px}
+.fg{margin-bottom:12px}
+.fl{display:block;font-size:11px;font-weight:600;color:var(--text2);margin-bottom:4px;text-transform:uppercase;letter-spacing:.5px}
+.fi,.fs,.ft{width:100%;padding:8px 12px;background:var(--bg3);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:inherit;font-size:13px;outline:none;transition:border-color var(--t)}
+.fi:focus,.fs:focus,.ft:focus{border-color:var(--accent)}
+.ft{resize:vertical;min-height:60px}
+.fr{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.m-foot{padding:10px 20px 16px;display:flex;gap:6px;justify-content:flex-end}
+.btn-p{background:var(--accent);color:#fff;border-color:var(--accent);font-weight:600}
+.btn-p:hover{background:#2563eb;box-shadow:0 4px 12px var(--glow)}
+
+/* FAB */
+.fab{position:fixed;bottom:20px;right:20px;width:48px;height:48px;border-radius:50%;background:var(--accent);color:#fff;border:0;font-size:22px;cursor:pointer;box-shadow:0 4px 14px var(--glow);transition:all .4s cubic-bezier(.34,1.56,.64,1);z-index:100;display:flex;align-items:center;justify-content:center}
+.fab:hover{transform:scale(1.1) rotate(90deg);box-shadow:0 8px 20px var(--glow)}
+
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+@keyframes modalIn{from{opacity:0;transform:scale(.92) translateY(16px)}to{opacity:1;transform:scale(1) translateY(0)}}
+
+/* NODE STYLES via SVG */
+.node-circle{transition:r .3s ease,fill .4s ease,stroke .4s ease}
+.node-label{font-family:'Space Grotesk',sans-serif;fill:var(--text);pointer-events:none;transition:fill var(--t);paint-order:stroke;stroke:var(--bg);stroke-width:3px}
+.link{stroke-linecap:round;fill:none;transition:opacity .4s ease}
+/* ROTARY DIAL SELECTOR (Cluster) */
+.dial-wrap{position:absolute;bottom:20px;left:20px;z-index:80;display:none;flex-direction:column;align-items:center;gap:8px;user-select:none;-webkit-user-select:none;touch-action:none}
+.dial-wrap.show{display:flex;animation:fadeIn .3s ease}
+.dial{width:88px;height:88px;border-radius:50%;background:var(--glass);border:2px solid var(--border2);backdrop-filter:blur(16px);position:relative;cursor:grab;box-shadow:0 4px 20px rgba(0,0,0,0.3)}.dial:active{cursor:grabbing}
+.dial-tick{position:absolute;top:8px;left:50%;width:3px;height:14px;margin-left:-1.5px;background:var(--accent);border-radius:2px;pointer-events:none;transition:none;transform-origin:center 36px}
+.dial-ring{position:absolute;inset:6px;border-radius:50%;border:1px solid var(--border);pointer-events:none}
+.dial-center{position:absolute;top:50%;left:50%;width:22px;height:22px;margin:-11px;border-radius:50%;background:var(--bg3);border:2px solid var(--accent);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:10px;color:var(--accent);transition:all var(--t);z-index:2}
+.dial-center:hover{background:var(--accent);color:#fff;transform:scale(1.1)}
+.dial-info{text-align:center;max-width:180px;pointer-events:auto}
+.dial-type{font-size:8px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;padding:1px 6px;border-radius:3px;color:#fff;display:inline-block;margin-bottom:3px}
+.dial-name{font-family:'Syne',sans-serif;font-weight:700;font-size:12px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:180px;background:var(--glass);backdrop-filter:blur(12px);padding:5px 12px;border-radius:8px;border:1px solid var(--border);cursor:pointer;transition:all var(--t)}.dial-name:hover{border-color:var(--accent);color:var(--accent)}
+.dial-nav{display:flex;gap:4px;margin-top:4px;justify-content:center}
+.dial-nav button{width:28px;height:28px;border-radius:50%;background:var(--glass);border:1px solid var(--border);color:var(--text2);font-size:12px;cursor:pointer;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(8px);transition:all var(--t)}.dial-nav button:hover{border-color:var(--accent);color:var(--accent);background:rgba(59,130,246,.1)}
+/* ACCESS CODE LOCK SCREEN */
+.lock-screen{position:fixed;inset:0;z-index:9999;background:var(--bg);display:flex;align-items:center;justify-content:center;flex-direction:column;transition:opacity .5s ease,transform .5s ease}
+.lock-screen.unlocked{opacity:0;transform:scale(1.05);pointer-events:none}
+.lock-logo{font-family:'Syne',sans-serif;font-weight:800;font-size:36px;background:linear-gradient(135deg,var(--accent),#ec4899);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin-bottom:6px}
+.lock-sub{font-size:13px;color:var(--text3);margin-bottom:32px;text-align:center;line-height:1.5}
+.lock-box{display:flex;flex-direction:column;align-items:center;gap:14px;background:var(--bg2);border:1px solid var(--border);border-radius:16px;padding:32px 40px;box-shadow:0 16px 48px rgba(0,0,0,0.4);backdrop-filter:blur(20px)}
+.lock-label{font-family:'Syne',sans-serif;font-weight:700;font-size:11px;text-transform:uppercase;letter-spacing:1.5px;color:var(--text3)}
+.lock-digits{display:flex;gap:8px}
+.lock-digit{width:48px;height:56px;background:var(--bg3);border:2px solid var(--border);border-radius:12px;color:var(--text);font-family:'Space Mono',monospace;font-size:24px;font-weight:700;text-align:center;outline:none;caret-color:var(--accent);transition:border-color .2s,box-shadow .2s}
+.lock-digit:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--glow)}
+.lock-digit.wrong{border-color:#ef4444;animation:shake .4s ease}
+.lock-enter{padding:10px 32px;background:var(--accent);color:#fff;border:none;border-radius:10px;font-family:'Syne',sans-serif;font-weight:700;font-size:13px;cursor:pointer;transition:all .2s;letter-spacing:.5px}
+.lock-enter:hover{background:#2563eb;box-shadow:0 4px 16px var(--glow);transform:translateY(-2px)}
+.lock-hint{font-size:10px;color:var(--text3);margin-top:4px}
+.lock-error{font-size:11px;color:#ef4444;font-weight:600;min-height:16px}
+@keyframes shake{0%,100%{transform:translateX(0)}20%,60%{transform:translateX(-6px)}40%,80%{transform:translateX(6px)}}
+/* QUICK START OVERLAY */
+.qs-overlay{position:fixed;inset:0;z-index:9998;background:rgba(0,0,0,0.7);backdrop-filter:blur(6px);display:none;align-items:center;justify-content:center;animation:fadeIn .3s ease}
+.qs-overlay.show{display:flex}
+.qs-card{background:var(--bg2);border:1px solid var(--border);border-radius:16px;box-shadow:0 16px 48px rgba(0,0,0,0.5);width:92%;max-width:520px;max-height:85vh;overflow-y:auto;animation:modalIn .4s cubic-bezier(.34,1.56,.64,1)}
+.qs-head{padding:24px 28px 12px;text-align:center;border-bottom:1px solid var(--border)}
+.qs-head h1{font-family:'Syne',sans-serif;font-weight:800;font-size:22px;background:linear-gradient(135deg,var(--accent),#ec4899);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin-bottom:4px}
+.qs-head p{font-size:12px;color:var(--text3)}
+.qs-body{padding:20px 28px}
+.qs-section{margin-bottom:16px}
+.qs-section h3{font-family:'Syne',sans-serif;font-weight:700;font-size:12px;text-transform:uppercase;letter-spacing:1px;color:var(--accent);margin-bottom:8px;display:flex;align-items:center;gap:6px}
+.qs-row{display:flex;gap:8px;align-items:flex-start;padding:4px 0;font-size:12px;line-height:1.5;color:var(--text2)}
+.qs-key{flex-shrink:0;min-width:90px;font-weight:600;color:var(--text);font-family:'Space Mono',monospace;font-size:11px}
+.qs-foot{padding:14px 28px 20px;text-align:center;border-top:1px solid var(--border)}
+.qs-start{padding:12px 40px;background:var(--accent);color:#fff;border:none;border-radius:10px;font-family:'Syne',sans-serif;font-weight:700;font-size:14px;cursor:pointer;transition:all .2s;letter-spacing:.5px}
+.qs-start:hover{background:#2563eb;box-shadow:0 4px 16px var(--glow);transform:translateY(-2px)}
+.qs-skip{display:block;margin-top:8px;font-size:10px;color:var(--text3);cursor:pointer;background:none;border:none;font-family:inherit}.qs-skip:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<!-- ACCESS CODE LOCK SCREEN -->
+<div class="lock-screen" id="lockScreen">
+  <div class="lock-logo">WORDWEB</div>
+  <div class="lock-sub">Design Academy Eindhoven<br>Interactive Thematic Network</div>
+  <div class="lock-box">
+    <div class="lock-label">Access Code</div>
+    <div class="lock-digits">
+      <input class="lock-digit" id="ld0" type="tel" maxlength="1" inputmode="numeric" autocomplete="off">
+      <input class="lock-digit" id="ld1" type="tel" maxlength="1" inputmode="numeric" autocomplete="off">
+      <input class="lock-digit" id="ld2" type="tel" maxlength="1" inputmode="numeric" autocomplete="off">
+      <input class="lock-digit" id="ld3" type="tel" maxlength="1" inputmode="numeric" autocomplete="off">
+    </div>
+    <div class="lock-error" id="lockErr"></div>
+    <button class="lock-enter" id="lockBtn">Unlock</button>
+    <div class="lock-hint">Ask the creator for the access code</div>
+  </div>
+</div>
+<!-- QUICK START OVERLAY -->
+<div class="qs-overlay" id="qsOverlay">
+  <div class="qs-card">
+    <div class="qs-head"><h1>Welcome to Wordweb</h1><p>Interactive Thematic Network — Design Academy Eindhoven</p></div>
+    <div class="qs-body">
+      <div class="qs-section"><h3>🖱️ Navigation</h3>
+        <div class="qs-row"><span class="qs-key">Scroll</span><span>Zoom in / out</span></div>
+        <div class="qs-row"><span class="qs-key">Drag</span><span>Pan across the network</span></div>
+        <div class="qs-row"><span class="qs-key">Click node</span><span>Open detail panel on the right</span></div>
+        <div class="qs-row"><span class="qs-key">/ key</span><span>Search by name, keyword or course</span></div>
+      </div>
+      <div class="qs-section"><h3>🗺️ Layouts (top right button)</h3>
+        <div class="qs-row"><span class="qs-key">⚡ Physics</span><span>Free-moving force network</span></div>
+        <div class="qs-row"><span class="qs-key">📌 Cluster</span><span>Radial circle + rotary dial (bottom left)</span></div>
+      </div>
+      <div class="qs-section"><h3>🎨 Filters (left sidebar)</h3>
+        <div class="qs-row"><span class="qs-key">Group By</span><span>Color by department, semester, type, etc.</span></div>
+        <div class="qs-row"><span class="qs-key">Lenses</span><span>Thematic cross-connections</span></div>
+        <div class="qs-row"><span class="qs-key">Threshold</span><span>Show only strong connections</span></div>
+      </div>
+      <div class="qs-section"><h3>📤 Extra</h3>
+        <div class="qs-row"><span class="qs-key">Hover</span><span>Highlight connections of a node</span></div>
+        <div class="qs-row"><span class="qs-key">Export ↓</span><span>Download as PNG or PDF</span></div>
+        <div class="qs-row"><span class="qs-key">⊙ / ⤢</span><span>Center / fit everything in view</span></div>
+      </div>
+    </div>
+    <div class="qs-foot">
+      <button class="qs-start" id="qsStart">Start Wordweb →</button>
+      <button class="qs-skip" id="qsSkip">Don't show again</button>
+    </div>
+  </div>
+</div>
+<div class="app" style="display:none" id="appWrap">
+  <!-- TOPBAR -->
+  <header class="topbar">
+    <button class="btn btn-i" id="sbToggle" title="Toggle sidebar">☰</button>
+    <span class="logo">WORDWEB</span>
+    <div class="search-wrap">
+      <span class="search-icon">⌕</span>
+      <input type="text" class="search-input" id="searchIn" placeholder="Search… (typo-tolerant)" autocomplete="off">
+      <div class="search-results" id="searchRes"></div>
+    </div>
+    <div class="actions">
+      <button class="btn btn-i" id="themeBtn" title="Toggle dark/light">☀</button>
+      <button class="btn" id="layoutBtn"><span id="layIco">⚡</span> <span id="layLbl">Physics</span></button>
+      <div class="dd">
+        <button class="btn" id="expBtn">↓ Export</button>
+        <div class="dd-menu" id="expMenu">
+          <div class="dd-item" onclick="W.exportJSON()">📄 JSON</div>
+          <div class="dd-item" onclick="W.importDialog()">📂 Import JSON</div>
+          <div class="dd-item" onclick="W.exportPNG()">🖼 PNG</div>
+          <div class="dd-item" onclick="W.exportPDF()">📋 PDF</div>
+        </div>
+      </div>
+      <button class="btn btn-i" id="centerBtn" title="Center view">⊙</button>
+      <button class="btn btn-i" id="fitBtn" title="Fit all">⤢</button>
+      <button class="btn" id="resetBtn">⟲ Reset</button>
+    </div>
+  </header>
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sb-title">Statistics</div>
+    <div class="stats">
+      <div class="stat"><div class="stat-n" id="sN">0</div><div class="stat-l">Nodes</div></div>
+      <div class="stat"><div class="stat-n" id="sE">0</div><div class="stat-l">Edges</div></div>
+      <div class="stat"><div class="stat-n" id="sG">0</div><div class="stat-l">Groups</div></div>
+    </div>
+    <div class="sb-title">Group By</div>
+    <button class="f-btn on" data-f="none" onclick="W.setFilter('none')"><span class="dot" style="background:#6b7280"></span>None</button>
+    <button class="f-btn" data-f="dept" onclick="W.setFilter('dept')"><span class="dot" style="background:#3b82f6"></span>Department</button>
+    <button class="f-btn" data-f="semester" onclick="W.setFilter('semester')"><span class="dot" style="background:#ef4444"></span>Semester</button>
+    <button class="f-btn" data-f="type" onclick="W.setFilter('type')"><span class="dot" style="background:#f59e0b"></span>Node Type</button>
+    <button class="f-btn" data-f="mat" onclick="W.setFilter('mat')"><span class="dot" style="background:#d97706"></span>Material</button>
+    <button class="f-btn" data-f="disc" onclick="W.setFilter('disc')"><span class="dot" style="background:#7c3aed"></span>Discipline</button>
+    <button class="f-btn" data-f="skill" onclick="W.setFilter('skill')"><span class="dot" style="background:#059669"></span>Skill Type</button>
+    <div class="sb-title" style="margin-top:10px">Thematic Lenses</div>
+    <button class="f-btn" data-f="th-all" onclick="W.setFilter('th-all')"><span class="dot" style="background:linear-gradient(135deg,#ec4899,#f59e0b,#10b981)"></span>✦ All Themes</button>
+    <button class="f-btn" data-f="th-chaos" onclick="W.setFilter('th-chaos')"><span class="dot" style="background:#EF4444"></span>Order ↔ Chaos</button>
+    <button class="f-btn" data-f="th-explore" onclick="W.setFilter('th-explore')"><span class="dot" style="background:#F59E0B"></span>Exploration</button>
+    <button class="f-btn" data-f="th-control" onclick="W.setFilter('th-control')"><span class="dot" style="background:#3B82F6"></span>Control ↔ Agency</button>
+    <button class="f-btn" data-f="th-percept" onclick="W.setFilter('th-percept')"><span class="dot" style="background:#8B5CF6"></span>Perception ↔ Meaning</button>
+    <button class="f-btn" data-f="th-motion" onclick="W.setFilter('th-motion')"><span class="dot" style="background:#EC4899"></span>Movement ↔ Change</button>
+    <button class="f-btn" data-f="th-form" onclick="W.setFilter('th-form')"><span class="dot" style="background:#10B981"></span>Material ↔ Form</button>
+    <button class="f-btn" data-f="th-connect" onclick="W.setFilter('th-connect')"><span class="dot" style="background:#06B6D4"></span>Connections</button>
+    <div id="legendBox" style="display:none"><div class="sb-title">Legend</div><div class="legend" id="legend"></div></div>
+    <div class="sb-title">Edge Threshold</div>
+    <div class="slider-g">
+      <div class="slider-l"><span>Min connections</span><span id="thrVal">1</span></div>
+      <input type="range" class="slider" id="thrSlider" min="1" max="8" value="1">
+    </div>
+    <div class="smart-info" id="smartInfo"></div>
+  </aside>
+
+  <!-- GRAPH -->
+  <main class="graph" id="graphArea"><svg id="svg"></svg>
+    <!-- ROTARY DIAL (Cluster mode navigation) -->
+    <div class="dial-wrap" id="dialWrap">
+      <div class="dial" id="dial"><div class="dial-ring"></div><div class="dial-tick" id="dialTick"></div><div class="dial-center" id="dialSelect" title="Open detail">↗</div></div>
+      <div class="dial-info"><span class="dial-type" id="dialType"></span><div class="dial-name" id="dialName"></div>
+        <div class="dial-nav"><button id="dialPrev" title="Previous">◀</button><button id="dialNext" title="Next">▶</button></div>
+      </div>
+    </div>
+  </main>
+
+  <!-- DETAIL PANEL -->
+  <aside class="detail" id="detailPanel"><div class="detail-inner" id="detailInner"></div></aside>
+</div>
+
+<!-- FAB -->
+<button class="fab" onclick="W.openAdd()">+</button>
+
+<!-- TOOLTIP -->
+<div class="tip" id="tip"><div class="tip-t" id="tipT"></div><div class="tip-y" id="tipY"></div><div class="tip-d" id="tipD"></div></div>
+
+<!-- ADD MODAL -->
+<div class="modal-bg" id="addModal">
+  <div class="modal">
+    <div class="m-head"><span class="m-title">Add Node</span><button class="m-close" onclick="W.closeAdd()">✕</button></div>
+    <div class="m-body">
+      <div class="fg"><label class="fl">Title *</label><input class="fi" id="aTitle"></div>
+      <div class="fg"><label class="fl">Type *</label><select class="fs" id="aType"><option value="project">Project</option><option value="theme">Theme</option><option value="concept">Concept</option><option value="question">Question</option></select></div>
+      <div class="fg"><label class="fl">Description</label><textarea class="ft" id="aDesc"></textarea></div>
+      <div class="fg"><label class="fl">Tags (comma separated)</label><input class="fi" id="aTags"></div>
+      <div class="fr"><div class="fg"><label class="fl">Year</label><select class="fs" id="aYear"><option value="0">N/A</option><option value="1">1</option><option value="2">2</option></select></div><div class="fg"><label class="fl">Semester</label><select class="fs" id="aSem"><option value="0">N/A</option><option value="1">1</option><option value="2">2</option></select></div></div>
+      <div class="fg"><label class="fl">Course</label><input class="fi" id="aCourse"></div>
+      <div class="fr"><div class="fg"><label class="fl">Department</label><select class="fs" id="aDept"><option>Overarching</option><option>Design</option><option>Studio</option><option>Contextual</option><option>Production</option><option>Design &amp; Production</option></select></div><div class="fg"><label class="fl">Material</label><select class="fs" id="aMat"><option>Conceptual</option><option>Physical</option><option>Digital</option><option>Mixed</option></select></div></div>
+      <div class="fr"><div class="fg"><label class="fl">Discipline</label><select class="fs" id="aDisc"><option>Mixed</option><option>2D</option><option>3D</option><option>Time-based</option><option>Text</option></select></div><div class="fg"><label class="fl">Skill</label><select class="fs" id="aSkill"><option>Mixed</option><option>Technical</option><option>Conceptual</option><option>Research</option></select></div></div>
+    </div>
+    <div class="m-foot"><button class="btn" onclick="W.closeAdd()">Cancel</button><button class="btn btn-p" onclick="W.addNode()">Add</button></div>
+  </div>
+</div>
+<input type="file" id="importFile" accept=".json" style="display:none" onchange="W.handleImport(event)">
+
+<script>
+// ============================================================
+//  DATA — Edit nodes here. Edges auto-generate from shared tags.
+// ============================================================
+const COLORS={
+  dept:{'Design':'#3B82F6','Studio':'#8B5CF6','Contextual':'#F59E0B','Production':'#10B981','Design & Production':'#EC4899','Overarching':'#F97316'},
+  semester:{'Y1S1':'#EF4444','Y1S2':'#F59E0B','Y2S1':'#3B82F6','N/A':'#6B7280'},
+  type:{project:'#3B82F6',theme:'#F59E0B',concept:'#10B981',question:'#EC4899'},
+  mat:{'Physical':'#D97706','Digital':'#06B6D4','Conceptual':'#EC4899','Mixed':'#8B5CF6'},
+  disc:{'2D':'#FBBF24','3D':'#7C3AED','Time-based':'#F97316','Text':'#94A3B8','Mixed':'#EC4899'},
+  skill:{'Technical':'#2563EB','Conceptual':'#DC2626','Research':'#059669','Mixed':'#A855F7'},
+  smart:['#EF4444','#F59E0B','#10B981','#3B82F6','#8B5CF6','#EC4899','#06B6D4','#F97316','#84CC16','#E879F9']
+};
+const SIZES={project:13,theme:13,concept:10,question:14};
+const DOT_SIZES={project:4,theme:4,concept:3.5,question:4};
+
+let NODES=[
+  // === COURSES (Y1S1 — Fundamentals Semester 1) ===
+  {id:'p-sound',type:'project',title:'Sound',desc:'Exploring sound as a design medium.',tags:[],year:1,sem:1,course:'Sound',dept:'Design',mat:'Conceptual',disc:'Time-based',skill:'Technical'},
+  {id:'p-performance',type:'project',title:'Performance',desc:'Embodied action as design — the tipping moment of jumping into the unknown.',tags:['expectations','unexpected','ritual','simple','complex','intentions','pineapple','rollercoaster','controversial','system','questioning','boundaries','breaking','q-spend-time','q-see-what-happens'],year:1,sem:1,course:'Performance',dept:'Design',mat:'Conceptual',disc:'Time-based',skill:'Conceptual'},
+  {id:'p-videonarrative',type:'project',title:'Video/Narrative',desc:'From literal to abstract — translating experiential narratives into poetic visual sequences.',tags:['exploration','discovery','unexpected','experimentation','norms','values','movement','surprises','time','metaphor','new-paths','labyrinth','perspectives','choices','decisions','compass','adventure','q-spend-time','q-keep-moving'],year:1,sem:1,course:'Video/Narrative',dept:'Design',mat:'Conceptual',disc:'Time-based',skill:'Technical'},
+  {id:'p-writing',type:'project',title:'Writing',desc:'Developing written analysis, reflection, and argumentation as design tools.',tags:['improvising','perspectives','pineapple','patterns','objectivity','subjectivity','q-hidden-patterns'],year:1,sem:1,course:'Writing',dept:'Contextual',mat:'Conceptual',disc:'Text',skill:'Conceptual'},
+  {id:'p-contextual',type:'project',title:'Contextual',desc:'Overarching contextual themes — reflection, discourse, and critical positioning.',tags:['objectivity','subjectivity','nature','behaviour','patterns','intersubjectivity','experience','electronics','light','perspectives','paradigm','connections'],year:1,sem:1,course:'Contextual',dept:'Contextual',mat:'Conceptual',disc:'Mixed',skill:'Conceptual'},
+  {id:'p-metal',type:'project',title:'Metal',desc:'Precision metalworking — constructing a stool focused on negative space and tension.',tags:['exploration','connections','input','output','symmetrical','asymmetrical','patterns','experimentation','systematic','iterating'],year:1,sem:1,course:'Metal',dept:'Production',mat:'Physical',disc:'3D',skill:'Technical'},
+  {id:'p-wood',type:'project',title:'Wood',desc:'Woodworking craftsmanship — iterative stool construction exploring form.',tags:['symmetrical','asymmetrical'],year:1,sem:1,course:'Wood',dept:'Production',mat:'Physical',disc:'3D',skill:'Technical'},
+  {id:'p-uxui',type:'project',title:'UX/UI',desc:'Designing digital interfaces and user experiences with systematic thinking.',tags:['interface','system'],year:1,sem:1,course:'UX/UI',dept:'Production',mat:'Digital',disc:'2D',skill:'Technical'},
+  {id:'p-ai',type:'project',title:'AI',desc:'Arduino-driven rhythm instrument with servos and mallets — robotics as materiality.',tags:['programming','hardware','technology','3d-printing','modeling','product','prototyping','testing','electronics'],year:1,sem:1,course:'AI',dept:'Production',mat:'Digital',disc:'Mixed',skill:'Technical'},
+  // === COURSES (Y1S2 — Fundamentals Semester 2) ===
+  {id:'p-silva',type:'project',title:'Silva Systems',desc:'Kite typology exploring flexibility vs structure — activated by external forces.',tags:['nature','movement','tension','kite','structure','shapes'],year:1,sem:2,course:'Silva Systems',dept:'Studio',mat:'Physical',disc:'3D',skill:'Mixed'},
+  {id:'p-painting',type:'project',title:'Painting',desc:'Rituals of Exploration — developing abstraction through adventure.',tags:['experimentation','ritual','exploration','shapes','labyrinth','pineapple','rollercoaster','order','structure','repetition','movement','q-lost-patterns'],year:1,sem:2,course:'Painting',dept:'Design',mat:'Physical',disc:'2D',skill:'Technical'},
+  {id:'p-drawing',type:'project',title:'Drawing',desc:'Observational and expressive drawing — developing abstraction.',tags:['dynamic','exploration','intersubjectivity','organic','structure','variation','contrast','patterns','experience','system','connections','balance','controversial','texture','geometrical','systematic','compass','boundaries','values','experimentation','unexpected','discovery','observation','order','perception','chaos','expression','intentions','perspectives','interactions','aesthetic','ethic','q-invisible-visible','q-social-intersubjectivity'],year:1,sem:2,course:'Drawing',dept:'Design',mat:'Physical',disc:'2D',skill:'Technical'},
+  {id:'p-modeling',type:'project',title:'Modeling',desc:'3D spatial construction and form exploration through iterative modeling.',tags:['merging','alteration','shapes','modeling'],year:1,sem:2,course:'Modeling',dept:'Design',mat:'Physical',disc:'3D',skill:'Technical'},
+  {id:'p-plastic',type:'project',title:'Plastics',desc:'2D to 3D translation — preserving surface tension between dimensions.',tags:['combinations','experimentation','exploration'],year:1,sem:2,course:'Plastics',dept:'Production',mat:'Physical',disc:'3D',skill:'Technical'},
+  {id:'p-ceramic',type:'project',title:'Ceramics',desc:'Ceramic production exploring material behaviour through hand-building.',tags:['playful','complex'],year:1,sem:2,course:'Ceramics',dept:'Production',mat:'Physical',disc:'3D',skill:'Technical'},
+  {id:'p-textile',type:'project',title:'Textiles',desc:'Textile production exploring material properties, surface, and structure.',tags:['experimentation','patterns','repetition','structure','shapes','texture'],year:1,sem:2,course:'Textiles',dept:'Production',mat:'Physical',disc:'3D',skill:'Technical'},
+  {id:'p-3dfab',type:'project',title:'3D Digital Fabrication',desc:'Geometric prototyping with digital tools — refinement as discipline.',tags:['animation'],year:1,sem:2,course:'3D Digital Fabrication',dept:'Production',mat:'Digital',disc:'3D',skill:'Technical'},
+  // === COURSES (Y2S1 — Main Phase) ===
+  {id:'p-sheetgoods',type:'project',title:'Sheet Goods',desc:'Production work with sheet materials — constraints and electronics.',tags:['experimentation','alteration','electronics','modularity','light','system'],year:2,sem:1,course:'Sheet Goods',dept:'Production',mat:'Physical',disc:'3D',skill:'Technical'},
+  {id:'p-fascination',type:'project',title:'Fascination Project',desc:'Interaction as evidence — context influences the truth of work.',tags:['light','order','chaos','decisions','exploration','installation','inspiration','interactive','system','movement','constellation','solid','flux','input','output','representation','switch','control','panel','pineapple','surreal','nature','patterns','experiment','connections','supply','demand','experience','metaphor','proactive','reactive','anemoia','status-quo','adventure','discovery','serendipity','cause','effect','luck','knowledge','electronics','dream','paradigm','perspectives','intersubjectivity','entropy','decay','liminality','threshold','error','glitch','organic','geometric','shapes','unpredictable','perfection','behaviour','purpose','constructed','norms','q-what-is-chaos','q-chaos-exist','q-invisible-visible','q-chaos-order','q-understand-no-rules','q-all-represented','q-what-representation','q-represent-all','q-all-solid','q-immeasurable-measurable'],year:2,sem:1,course:'Fascination Project',dept:'Design & Production',mat:'Mixed',disc:'Mixed',skill:'Mixed'},
+  {id:'p-madefor',type:'project',title:'Made For',desc:'Designing with purpose and user context.',tags:['exploration'],year:2,sem:1,course:'Made For',dept:'Production',mat:'Mixed',disc:'Mixed',skill:'Mixed'},
+];
+// Generate keyword theme nodes — each word appears ONCE, connecting all courses that share it
+const _KW=['Expectations','Unexpected','Ritual','Simple','Complex','Intentions','Pineapple','Rollercoaster','Controversial','System','Questioning','Boundaries','Breaking','Improvising','Perspectives','Patterns','Objectivity','Subjectivity','Exploration','Connections','Input','Output','Symmetrical','Asymmetrical','Experimentation','Systematic','Iterating','Discovery','Norms','Values','Movement','Surprises','Time','Metaphor','New Paths','Labyrinth','Choices','Decisions','Compass','Adventure','Interface','Programming','Hardware','Technology','3D Printing','Product','Prototyping','Testing','Electronics','Nature','Tension','Kite','Structure','Shapes','Order','Repetition','Combinations','Playful','Merging','Alteration','Texture','Animation','Modularity','Light','Dynamic','Intersubjectivity','Organic','Variation','Contrast','Experience','Balance','Geometrical','Observation','Perception','Chaos','Expression','Interactions','Aesthetic','Ethic','Installation','Inspiration','Interactive','Constellation','Solid','Flux','Representation','Switch','Control','Panel','Surreal','Experiment','Supply','Demand','Proactive','Reactive','Anemoia','Status Quo','Serendipity','Cause','Effect','Luck','Knowledge','Dream','Paradigm','Entropy','Decay','Liminality','Threshold','Error','Glitch','Geometric','Unpredictable','Perfection','Behaviour','Purpose','Constructed'];
+_KW.forEach(w=>{const t=w.toLowerCase().replace(/\s+/g,'-');NODES.push({id:'t-'+t,type:'theme',title:w,desc:'',tags:[t],year:0,sem:0,course:'',dept:'',mat:'Conceptual',disc:'Mixed',skill:'Conceptual'})});
+// Generate question nodes
+[['q-spend-time','How do I spend my time?'],['q-keep-moving','Keep moving, do not stand still.'],['q-hidden-patterns','Hidden Patterns.'],['q-see-what-happens','We will see what happens.'],['q-what-is-chaos','What is chaos?'],['q-chaos-exist','Does chaos exist?'],['q-invisible-visible','How to make the invisible visible in an invisible way?'],['q-social-intersubjectivity','A social design to experience intersubjectivity.'],['q-chaos-order','How can chaos and order guide your decision making?'],['q-lost-patterns','Lost in Patterns.'],['q-understand-no-rules','How to make people understand without any rules?'],['q-all-represented','How is the all represented?'],['q-what-representation','What is a representation?'],['q-represent-all','How can I represent the all?'],['q-all-solid','How can the all take shape in a solid?'],['q-immeasurable-measurable','How can the immeasurable be expressed through the measurable?']].forEach(([id,title])=>{NODES.push({id,type:'question',title,desc:'',tags:[id],year:0,sem:0,course:'',dept:'',mat:'Conceptual',disc:'Mixed',skill:'Conceptual'})});
+
+
+// ============================================================
+//  APP
+// ============================================================
+const W={
+  sim:null, svg:null, g:null, nodes:[], links:[], zoom:null,
+  state:{filter:'none',layout:'physics',theme:localStorage.getItem('ww-theme')||'dark',threshold:1,selected:null,smartGroups:null},
+  width:0, height:0,
+  _dialAngle:-Math.PI/2, _dialActive:false, _highlightedNodeId:null, _sortedClusterNodes:[],
+
+  init(){
+    document.documentElement.setAttribute('data-theme',this.state.theme);
+    this.updateThemeIcon();
+    this.buildGraph();
+    this.initSearch();
+    this.bindUI();
+    this.initDial();
+    this.stats();
+  },
+
+  // === BUILD D3 FORCE GRAPH (Obsidian-style) ===
+  buildGraph(){
+    const area=document.getElementById('graphArea');
+    this.width=area.clientWidth; this.height=area.clientHeight;
+    // Build bipartite links: project↔theme/question. Weight = number of projects sharing that tag.
+    const linkData=[];
+    const tagIndex={};
+    NODES.forEach(n=>n.tags.forEach(t=>{if(!tagIndex[t])tagIndex[t]=[];tagIndex[t].push(n.id)}));
+    const projIds=new Set(NODES.filter(n=>n.type==='project').map(n=>n.id));
+    const linkDedup=new Set();
+    Object.entries(tagIndex).forEach(([tag,ids])=>{
+      const projs=ids.filter(id=>projIds.has(id));
+      const others=ids.filter(id=>!projIds.has(id));
+      const w=projs.length;
+      projs.forEach(p=>{others.forEach(t=>{
+        const k=p<t?p+'|'+t:t+'|'+p;
+        if(!linkDedup.has(k)){linkDedup.add(k);linkData.push({source:p,target:t,weight:w})}
+      })});
+    });
+    this.nodes=NODES.map(n=>({...n,color:COLORS.type[n.type],group:n.type,r:SIZES[n.type]||12,dr:DOT_SIZES[n.type]||4}));
+    this.links=linkData;
+
+    const svg=d3.select('#svg');
+    svg.selectAll('*').remove();
+    this.svg=svg;
+
+    // Zoom
+    this.zoom=d3.zoom().scaleExtent([0.1,5]).on('zoom',e=>{this.g.attr('transform',e.transform)});
+    svg.call(this.zoom).on('dblclick.zoom',null);
+
+    this.g=svg.append('g');
+    this.treeGroup=null;
+
+    // SVG definitions
+    const defs=svg.append('defs');
+    defs.append('marker').attr('id','arrow').attr('viewBox','0 0 10 10').attr('refX',25).attr('refY',5).attr('markerWidth',4).attr('markerHeight',4).attr('orient','auto').append('path').attr('d','M 0 0 L 10 5 L 0 10 z').attr('fill','var(--border2)');
+    // Soft blob filter for group backgrounds (gaussian blur + grain texture)
+    const blobFilter=defs.append('filter').attr('id','blob-grain').attr('x','-60%').attr('y','-60%').attr('width','220%').attr('height','220%');
+    blobFilter.append('feGaussianBlur').attr('stdDeviation','20').attr('result','blur');
+    blobFilter.append('feTurbulence').attr('type','fractalNoise').attr('baseFrequency','0.5').attr('numOctaves','3').attr('result','noise');
+    blobFilter.append('feColorMatrix').attr('in','noise').attr('type','saturate').attr('values','0').attr('result','grayNoise');
+    blobFilter.append('feBlend').attr('mode','overlay').attr('in','blur').attr('in2','grayNoise').attr('result','textured');
+    blobFilter.append('feComposite').attr('in','textured').attr('in2','blur').attr('operator','in');
+
+    // Pre-compute curvature index per link (fan offset for parallel links)
+    const pairCount={};
+    this.links.forEach(l=>{
+      const sid=typeof l.source==='object'?l.source.id:l.source;
+      const tid=typeof l.target==='object'?l.target.id:l.target;
+      const k=sid<tid?sid+'|'+tid:tid+'|'+sid;
+      if(!pairCount[k])pairCount[k]={n:0};
+      l._pairIdx=pairCount[k].n++;
+      l._pairKey=k;
+    });
+    this.links.forEach(l=>{const total=pairCount[l._pairKey].n;l.curveFan=(l._pairIdx-(total-1)/2)*0.08});
+
+    // Group overlay layers (behind everything)
+    this.hullGroup=this.g.append('g').attr('class','hull-group');
+
+    // Links — transparent gray, always behind nodes
+    this.linkSel=this.g.append('g').attr('class','links').selectAll('path').data(this.links).join('path')
+      .attr('class','link')
+      .attr('stroke',this.state.theme==='dark'?'rgba(255,255,255,0.18)':'rgba(0,0,0,0.12)')
+      .attr('stroke-width',d=>Math.min(0.8+d.weight*0.4,3))
+      .attr('opacity',d=>d.weight<this.state.threshold?0:Math.min(0.3+d.weight*0.06,0.55));
+
+    // Nodes group
+    this.nodeSel=this.g.append('g').attr('class','nodes').selectAll('g').data(this.nodes).join('g')
+      .attr('class','node-g')
+      .style('cursor','pointer');
+
+    // Arc label group — ON TOP of everything, for cluster mode group names
+    this.arcLabelGroup=this.g.append('g').attr('class','arc-label-group');
+
+    // Circles — start as small dots (physics mode)
+    this.nodeSel.append('circle')
+      .attr('class','node-circle')
+      .attr('r',d=>d.dr)
+      .attr('fill',d=>d.color)
+      .attr('fill-opacity',1)
+      .attr('stroke',d=>d.color)
+      .attr('stroke-width',1.5)
+      .attr('stroke-opacity',0.5);
+
+    // Labels — beside dots in physics, below circles in cluster
+    this.nodeSel.append('text')
+      .attr('class','node-label')
+      .attr('dy',3)
+      .attr('text-anchor','start')
+      .attr('dx',d=>d.dr+5)
+      .attr('font-size',d=>d.type==='project'?10:8)
+      .attr('font-weight',d=>d.type==='project'?600:400)
+      .text(d=>{
+        let t=d.type==='question'?'? '+d.title:d.title;
+        return t.length>22?t.slice(0,21)+'…':t;
+      });
+
+    // Drag — with cluster mode snap-to-radius behavior
+    const drag=d3.drag()
+      .on('start',(e,d)=>{
+        if(!e.active) this.sim.alphaTarget(0.08).restart();
+        d.fx=d.x;d.fy=d.y;
+        if(this.state.layout==='cluster') d._origPos={x:d._tx||d.x,y:d._ty||d.y};
+      })
+      .on('drag',(e,d)=>{d.fx=e.x;d.fy=e.y})
+      .on('end',(e,d)=>{
+        if(!e.active) this.sim.alphaTarget(0);
+        if(this.state.layout==='cluster'){
+          const dx=e.x-this.cx,dy=e.y-this.cy;
+          const dist=Math.sqrt(dx*dx+dy*dy);
+          if(dist>=this.R*0.2&&dist<=this.R*1.4){
+            d.fx=e.x;d.fy=e.y;d._tx=e.x;d._ty=e.y;
+          } else {
+            const ox=d._origPos.x,oy=d._origPos.y;
+            d.fx=ox;d.fy=oy;d.x=ox;d.y=oy;d._tx=ox;d._ty=oy;
+          }
+        } else {
+          d.fx=null;d.fy=null;
+        }
+      });
+    this.nodeSel.call(drag);
+
+    // Scan beam group (for rotary dial selector)
+    this._scanGroup=this.g.append('g').attr('class','scan-group');
+
+    // Hover
+    const tip=document.getElementById('tip'),tipT=document.getElementById('tipT'),tipY=document.getElementById('tipY'),tipD=document.getElementById('tipD');
+    this.nodeSel
+      .on('mouseenter',(e,d)=>{
+        tipT.textContent=d.title;
+        tipY.textContent=d.type.toUpperCase()+(d.course?' — '+d.course:'');
+        tipD.textContent=d.desc?d.desc.substring(0,120)+(d.desc.length>120?'…':''):'';
+        tip.classList.add('show');
+        // Highlight neighborhood
+        const conn=new Set();
+        this.links.forEach(l=>{
+          const s=typeof l.source==='object'?l.source.id:l.source;
+          const t=typeof l.target==='object'?l.target.id:l.target;
+          if(s===d.id&&l.weight>=this.state.threshold) conn.add(t);
+          if(t===d.id&&l.weight>=this.state.threshold) conn.add(s);
+        });
+        conn.add(d.id);
+        this.nodeSel.select('circle').attr('fill-opacity',n=>conn.has(n.id)?1:0.15).attr('stroke-opacity',n=>conn.has(n.id)?0.8:0.05);
+        this.nodeSel.select('text').attr('opacity',n=>conn.has(n.id)?1:0.08);
+        this.linkSel.attr('opacity',l=>{
+          const s=typeof l.source==='object'?l.source.id:l.source;
+          const t=typeof l.target==='object'?l.target.id:l.target;
+          return (s===d.id||t===d.id)&&l.weight>=this.state.threshold?0.6:0.03;
+        }).attr('stroke',l=>{
+          const s=typeof l.source==='object'?l.source.id:l.source;
+          const t=typeof l.target==='object'?l.target.id:l.target;
+          return (s===d.id||t===d.id)&&l.weight>=this.state.threshold?d.color:(this.state.theme==='dark'?'rgba(255,255,255,0.18)':'rgba(0,0,0,0.12)');
+        }).attr('stroke-width',l=>{
+          const s=typeof l.source==='object'?l.source.id:l.source;
+          const t=typeof l.target==='object'?l.target.id:l.target;
+          return (s===d.id||t===d.id)&&l.weight>=this.state.threshold?Math.min(2+l.weight*0.6,4.5):Math.min(0.8+l.weight*0.4,3);
+        });
+        d3.select(e.currentTarget).select('circle').transition().duration(200).attr('r',d=>this.state.layout==='cluster'?d.r*1.4:d.dr*2).attr('stroke-width',3);
+      })
+      .on('mousemove',(e)=>{tip.style.left=(e.clientX+14)+'px';tip.style.top=(e.clientY+14)+'px'})
+      .on('mouseleave',(e,d)=>{
+        tip.classList.remove('show');
+        this.nodeSel.select('circle').attr('fill-opacity',1).attr('stroke-opacity',0.4);
+        this.nodeSel.select('text').attr('opacity',n=>(this.state.filter.startsWith('th-')&&n.type==='project')?0.5:1);
+        const lc=this.state.theme==='dark'?'rgba(255,255,255,0.18)':'rgba(0,0,0,0.12)';
+        this.linkSel.attr('opacity',l=>l.weight<this.state.threshold?0:Math.min(0.3+l.weight*0.06,0.55))
+          .attr('stroke',lc)
+          .attr('stroke-width',l=>Math.min(0.8+l.weight*0.4,3));
+        d3.select(e.currentTarget).select('circle').transition().duration(200).attr('r',d=>this.state.layout==='cluster'?d.r:d.dr).attr('stroke-width',this.state.layout==='cluster'?2:1.5);
+        this._restoreScanHighlight();
+      })
+      .on('click',(e,d)=>{e.stopPropagation();this.showDetail(d.id)});
+
+    svg.on('click',()=>this.closeDetail());
+
+    // Store center for radial cluster mode
+    this.cx=this.width/2; this.cy=this.height/2;
+    this.R=Math.min(this.width,this.height)*0.38;
+
+    // Force simulation — physics = force-directed (default)
+    this.sim=d3.forceSimulation(this.nodes)
+      .force('link',d3.forceLink(this.links).id(d=>d.id).distance(d=>Math.max(120-d.weight*8,50)).strength(d=>Math.min(d.weight*0.02,0.1)))
+      .force('charge',d3.forceManyBody().strength(-280).distanceMax(500).theta(0.9))
+      .force('center',d3.forceCenter(this.cx,this.cy).strength(0.04))
+      .force('collision',d3.forceCollide().radius(d=>{
+        const label=d.type==='question'?('? '+d.title):d.title;
+        const textW=Math.min(label.length*4.5,100);
+        return Math.max(d.dr+3,textW/2);
+      }).strength(0.7).iterations(2))
+      .force('x',d3.forceX(this.cx).strength(0.01))
+      .force('y',d3.forceY(this.cy).strength(0.01))
+      .alphaDecay(0.025)
+      .alphaMin(0.002)
+      .velocityDecay(0.6)
+      .on('tick',()=>{
+        // Curved links
+        {
+          this.linkSel.attr('d',d=>{
+            const sx=d.source.x,sy=d.source.y,tx=d.target.x,ty=d.target.y;
+            const mx=(sx+tx)/2,my=(sy+ty)/2;
+            const dx=tx-sx,dy=ty-sy;
+            const dist=Math.sqrt(dx*dx+dy*dy)||1;
+            const px=-dy/dist,py=dx/dist;
+            const fan=(d.curveFan||0)*dist*0.3;
+            const pull=0.35;
+            const cpx=mx+(this.cx-mx)*pull+px*fan;
+            const cpy=my+(this.cy-my)*pull+py*fan;
+            return `M${sx},${sy} Q${cpx},${cpy} ${tx},${ty}`;
+          });
+        }
+        // Skip label updates during layout morph transitions
+        if(this._morphingLayout) {
+          this.nodeSel.attr('transform',d=>`translate(${d.x},${d.y})`);
+        } else if(this.state.layout==='cluster'){
+          // Radial: rotate labels outward
+          const thematicOffsets=this.state.filter.startsWith('th-')?this._computeThematicLabelOffsets():null;
+          this.nodeSel.attr('transform',d=>{
+            const angle=Math.atan2(d.y-this.cy,d.x-this.cx)*180/Math.PI;
+            const flip=angle>90||angle<-90;
+            return `translate(${d.x},${d.y}) rotate(${flip?angle+180:angle})`;
+          });
+          this.nodeSel.select('text').attr('text-anchor',d=>{
+            const angle=Math.atan2(d.y-this.cy,d.x-this.cx)*180/Math.PI;
+            return (angle>90||angle<-90)?'end':'start';
+          }).attr('dx',d=>{
+            const angle=Math.atan2(d.y-this.cy,d.x-this.cx)*180/Math.PI;
+            const extra=this.state.filter.startsWith('th-')?14:6;
+            return (angle>90||angle<-90)?-(d.r+extra):(d.r+extra);
+          }).attr('dy','0.35em'
+          ).attr('font-size',d=>d.type==='project'?9:7
+          ).attr('opacity',d=>{
+            if(this.state.filter.startsWith('th-')&&d.type==='project') return 0.5;
+            return 1;
+          });
+        } else {
+          // Physics: beside-dot labels
+          this.nodeSel.attr('transform',d=>`translate(${d.x},${d.y})`);
+          this.nodeSel.select('text').attr('text-anchor','start').attr('dx',d=>d.dr+5).attr('dy',3)
+            .attr('font-size',d=>d.type==='project'?10:8);
+        }
+        // Update group hull overlays in physics mode
+        if(this.state.layout==='physics'&&this.state.filter!=='none') this.updateGroupOverlays();
+      });
+
+    // Fast entrance animation
+    this.nodeSel.select('circle').attr('r',0).transition().delay((_,i)=>Math.min(i*3,200)).duration(300).ease(d3.easeCubicOut).attr('r',d=>d.dr);
+    this.nodeSel.select('text').attr('opacity',0).transition().delay((_,i)=>Math.min(i*3+100,300)).duration(250).attr('opacity',1);
+  },
+
+  // === FILTERS ===
+  setFilter(f){
+    this.state.filter=f;
+    document.querySelectorAll('.f-btn').forEach(b=>b.classList.remove('on'));
+    document.querySelector(`[data-f="${f}"]`).classList.add('on');
+    if(f==='smart'){this.applySmartFilter();return;}
+    // Thematic lens filters
+    if(f.startsWith('th-')){this.applyThematicFilter(f);return;}
+    document.getElementById('smartInfo').classList.remove('show');
+    // Restore project nodes if coming from thematic filter
+    this.nodeSel.transition().duration(400).style('opacity',1);
+    this.nodeSel.select('text').transition().duration(300).attr('opacity',1);
+    this.linkSel.transition().duration(400).attr('opacity',d=>d.weight<this.state.threshold?0:Math.min(0.3+d.weight*0.06,0.55));
+    // Clear overlays if switching to none
+    if(f==='none') this.clearOverlays();
+    const maps={
+      none:d=>({c:COLORS.type[d.type],g:d.type}),
+      dept:d=>({c:COLORS.dept[d.dept]||'#6B7280',g:d.dept}),
+      semester:d=>{const s=d.year&&d.sem?`Y${d.year}S${d.sem}`:'N/A';return{c:COLORS.semester[s]||'#6B7280',g:s}},
+      type:d=>({c:COLORS.type[d.type]||'#6B7280',g:d.type}),
+      mat:d=>({c:COLORS.mat[d.mat]||'#6B7280',g:d.mat}),
+      disc:d=>({c:COLORS.disc[d.disc]||'#6B7280',g:d.disc}),
+      skill:d=>({c:COLORS.skill[d.skill]||'#6B7280',g:d.skill}),
+    };
+    const fn=maps[f]||maps.none;
+    this.nodes.forEach(d=>{const r=fn(d);d.color=r.c;d.group=r.g});
+    this.nodeSel.select('circle').transition().duration(600).attr('fill',d=>d.color).attr('stroke',d=>d.color);
+    // Smooth morph to new group positions
+    if(this.state.layout==='cluster'){
+      this.applyCluster();
+    } else {
+      this.smoothGroupTransition(f!=='none');
+    }
+    this.updateLegend(f);
+    this.stats();
+  },
+
+  updateLegend(f){
+    const box=document.getElementById('legendBox'),leg=document.getElementById('legend');
+    if(f==='none'){box.style.display='none';return;}
+    box.style.display='block';
+    if(f.startsWith('th-')) return; // thematic filters handle their own legend
+    const p={dept:COLORS.dept,semester:COLORS.semester,type:COLORS.type,mat:COLORS.mat,disc:COLORS.disc,skill:COLORS.skill}[f];
+    if(!p){box.style.display='none';return;}
+    leg.innerHTML=Object.entries(p).map(([k,v])=>`<div class="lg-item"><div class="lg-color" style="background:${v}"></div>${k}</div>`).join('');
+  },
+
+  // === THEMATIC LENS FILTERS (words, questions, sentences only — projects dimmed) ===
+  _thematicGroups:{
+    'th-chaos':{name:'Order ↔ Chaos',groups:[
+      {name:'Order & Structure',color:'#3B82F6',tags:['order','system','systematic','structure','patterns','geometric','geometrical','constellation','repetition','norms','constructed','q-understand-no-rules']},
+      {name:'Chaos & Entropy',color:'#EF4444',tags:['chaos','entropy','decay','glitch','error','unpredictable','flux','rollercoaster','breaking','q-what-is-chaos','q-chaos-exist']},
+      {name:'Thresholds',color:'#F59E0B',tags:['threshold','liminality','boundaries','balance','tension','contrast','variation','q-chaos-order']},
+    ]},
+    'th-explore':{name:'Exploration & Discovery',groups:[
+      {name:'Exploration',color:'#F59E0B',tags:['exploration','experimentation','experiment','adventure','discovery','observation','new-paths','labyrinth','compass','q-keep-moving']},
+      {name:'Serendipity & Chance',color:'#EC4899',tags:['serendipity','luck','unexpected','surprises','anemoia','dream','surreal','q-see-what-happens']},
+      {name:'Knowledge & Experience',color:'#10B981',tags:['experience','knowledge','improvising','iterating','testing','prototyping','q-hidden-patterns','q-lost-patterns']},
+    ]},
+    'th-control':{name:'Control ↔ Agency',groups:[
+      {name:'Control & Systems',color:'#3B82F6',tags:['control','switch','panel','system','interface','programming','electronics','hardware','technology']},
+      {name:'Input & Output',color:'#06B6D4',tags:['input','output','cause','effect','supply','demand','proactive','reactive']},
+      {name:'Decisions & Choices',color:'#F97316',tags:['decisions','choices','intentions','questioning','boundaries','breaking','controversial','q-spend-time']},
+    ]},
+    'th-percept':{name:'Perception & Meaning',groups:[
+      {name:'Perception',color:'#8B5CF6',tags:['perception','perspectives','observation','intersubjectivity','objectivity','subjectivity','q-invisible-visible','q-social-intersubjectivity']},
+      {name:'Expression & Aesthetics',color:'#EC4899',tags:['expression','aesthetic','ethic','metaphor','representation','surreal','dream','q-what-representation','q-represent-all']},
+      {name:'Rituals & Norms',color:'#F59E0B',tags:['ritual','norms','values','expectations','status-quo','paradigm','controversial','pineapple','q-all-represented','q-all-solid']},
+    ]},
+    'th-motion':{name:'Movement & Change',groups:[
+      {name:'Movement & Dynamic',color:'#EC4899',tags:['movement','dynamic','flux','rollercoaster','adventure','time']},
+      {name:'Tension & Balance',color:'#F97316',tags:['tension','balance','contrast','variation','repetition','threshold','liminality','q-immeasurable-measurable']},
+      {name:'Transformation',color:'#8B5CF6',tags:['alteration','merging','combinations','animation','decay','entropy','serendipity']},
+    ]},
+    'th-form':{name:'Material & Form',groups:[
+      {name:'Shapes & Geometry',color:'#10B981',tags:['shapes','geometric','geometrical','organic','structure','symmetrical','asymmetrical','solid','constellation']},
+      {name:'Surface & Texture',color:'#D97706',tags:['texture','light','nature','kite','playful','modularity','perfection']},
+      {name:'Making & Purpose',color:'#06B6D4',tags:['behaviour','purpose','constructed','installation','interactive','product','3d-printing','modeling']},
+    ]},
+    'th-connect':{name:'Connections & Relations',groups:[
+      {name:'Connections',color:'#06B6D4',tags:['connections','interactions','interactive','interface','constellation','patterns']},
+      {name:'Systems & Networks',color:'#3B82F6',tags:['system','systematic','electronics','programming','hardware','technology','modularity']},
+      {name:'Human & Social',color:'#EC4899',tags:['intersubjectivity','perspectives','experience','ethic','values','norms','inspiration']},
+    ]},
+  },
+
+  applyThematicFilter(f){
+    document.getElementById('smartInfo').classList.remove('show');
+    const dimColor='#374151';
+    const themeKey=f==='th-all'?null:f;
+    // Build tag→group mapping
+    const tagMap={};
+    if(themeKey&&this._thematicGroups[themeKey]){
+      const def=this._thematicGroups[themeKey];
+      def.groups.forEach(g=>{g.tags.forEach(t=>{tagMap[t]=g})});
+    } else {
+      // "All Themes" — assign each keyword to its best thematic group
+      Object.values(this._thematicGroups).forEach(def=>{
+        def.groups.forEach(g=>{g.tags.forEach(t=>{if(!tagMap[t])tagMap[t]=g})});
+      });
+    }
+    // Assign colors: projects get assigned to their most-connected thematic group
+    // First assign themes/questions
+    this.nodes.forEach(d=>{
+      if(d.type!=='project'){
+        const nodeTag=d.tags&&d.tags[0]?d.tags[0]:'';
+        const grp=tagMap[nodeTag];
+        if(grp){d.color=grp.color;d.group=grp.name;}
+        else{d.color='#6B7280';d.group='Other';}
+      }
+    });
+    // Now assign projects to their best matching thematic group via links
+    const projGroupScore={};
+    this.links.forEach(l=>{
+      const sid=typeof l.source==='object'?l.source.id:l.source;
+      const tid=typeof l.target==='object'?l.target.id:l.target;
+      const sNode=this.nodes.find(n=>n.id===sid);
+      const tNode=this.nodes.find(n=>n.id===tid);
+      if(!sNode||!tNode) return;
+      // If one is project and other is themed, score the project for that group
+      if(sNode.type==='project'&&tNode.group&&tNode.group!=='Other'&&tNode.group!=='_projects'){
+        if(!projGroupScore[sid]) projGroupScore[sid]={};
+        projGroupScore[sid][tNode.group]=(projGroupScore[sid][tNode.group]||0)+(l.weight||1);
+      }
+      if(tNode.type==='project'&&sNode.group&&sNode.group!=='Other'&&sNode.group!=='_projects'){
+        if(!projGroupScore[tid]) projGroupScore[tid]={};
+        projGroupScore[tid][sNode.group]=(projGroupScore[tid][sNode.group]||0)+(l.weight||1);
+      }
+    });
+    // Assign each project to its highest-scoring group
+    this.nodes.forEach(d=>{
+      if(d.type==='project'){
+        const scores=projGroupScore[d.id];
+        if(scores){
+          let best=null,bestScore=0;
+          Object.entries(scores).forEach(([gName,sc])=>{if(sc>bestScore){best=gName;bestScore=sc}});
+          if(best){
+            // Find group color from arc definitions
+            const allGroups=themeKey&&this._thematicGroups[themeKey]?this._thematicGroups[themeKey].groups:
+              [].concat(...Object.values(this._thematicGroups).map(d2=>d2.groups));
+            const gDef=allGroups.find(g2=>g2.name===best);
+            d.color=gDef?gDef.color:'#6B7280';
+            d.group=best;
+          } else { d.color='#6B7280';d.group='Other'; }
+        } else { d.color='#6B7280';d.group='Other'; }
+      }
+    });
+    // Animate color — projects get a lighter tint, not transparent
+    this.nodeSel.select('circle').transition().duration(600)
+      .attr('fill',d=>{
+        if(d.type==='project'){
+          // Lighten the group color for projects
+          const c=d3.color(d.color);
+          if(c){c.opacity=1; const hsl=d3.hsl(c); hsl.l=Math.min(hsl.l+0.2,0.85); hsl.s=Math.max(hsl.s-0.15,0.15); return hsl.formatHex();}
+        }
+        return d.color;
+      })
+      .attr('stroke',d=>d.color).attr('fill-opacity',1);
+    // All nodes fully visible
+    this.nodeSel.transition().duration(500)
+      .style('opacity',1);
+    // Show labels for themes/questions, smaller for projects
+    this.nodeSel.select('text').transition().duration(500)
+      .attr('opacity',d=>d.type==='project'?0.5:1);
+    // Show links with reduced opacity
+    this.linkSel.transition().duration(500).attr('opacity',d=>d.weight<this.state.threshold?0:Math.min(0.15+d.weight*0.03,0.3));
+    // Build legend
+    const box=document.getElementById('legendBox'),leg=document.getElementById('legend');
+    box.style.display='block';
+    if(themeKey&&this._thematicGroups[themeKey]){
+      const def=this._thematicGroups[themeKey];
+      leg.innerHTML=def.groups.map(g=>`<div class="lg-item"><div class="lg-color" style="background:${g.color}"></div>${g.name}</div>`).join('')+
+        `<div class="lg-item"><div class="lg-color" style="background:#6B7280"></div>Other</div>`;
+    } else {
+      // All themes legend — collect unique groups
+      const seen=new Set();const items=[];
+      Object.values(this._thematicGroups).forEach(def=>{
+        def.groups.forEach(g=>{if(!seen.has(g.name)){seen.add(g.name);items.push(g)}});
+      });
+      leg.innerHTML=items.map(g=>`<div class="lg-item"><div class="lg-color" style="background:${g.color}"></div>${g.name}</div>`).join('')+
+        `<div class="lg-item"><div class="lg-color" style="background:#6B7280"></div>Other</div>`;
+    }
+    // Layout morph
+    if(this.state.layout==='cluster'){
+      this.applyCluster();
+    } else {
+      this.smoothGroupTransition(true);
+    }
+    this.stats();
+  },
+
+  applySmartFilter(){
+    const modes=[
+      {name:'Hidden Bridges',fn:()=>this.smartBridges()},
+      {name:'Tension Pairs',fn:()=>this.smartTensions()},
+      {name:'Method Echoes',fn:()=>this.smartMethods()},
+      {name:'Evolutionary Arcs',fn:()=>this.smartArcs()},
+      {name:'Material Conversations',fn:()=>this.smartMaterial()},
+    ];
+    const m=modes[Math.floor(Math.random()*modes.length)];
+    const groups=m.fn();
+    this.state.smartGroups={mode:m.name,groups};
+    const gmap={};
+    groups.forEach((g,i)=>g.ids.forEach(id=>{gmap[id]={c:COLORS.smart[i%COLORS.smart.length],g:g.name}}));
+    this.nodes.forEach(d=>{const info=gmap[d.id];d.color=info?info.c:'#374151';d.group=info?info.g:'Ungrouped'});
+    this.nodeSel.select('circle').transition().duration(600).attr('fill',d=>d.color).attr('stroke',d=>d.color);
+    const el=document.getElementById('smartInfo');
+    el.innerHTML=`<h4>✦ ${m.name}</h4>`+groups.map((g,i)=>`<div class="sg-item"><div class="sg-name"><span class="lg-color" style="background:${COLORS.smart[i%COLORS.smart.length]}"></span>${g.name} <span style="color:var(--text3)">(${g.ids.length})</span></div><div class="sg-explain">${g.why}</div></div>`).join('');
+    el.classList.add('show');
+    document.getElementById('legendBox').style.display='block';
+    document.getElementById('legend').innerHTML=groups.map((g,i)=>`<div class="lg-item"><div class="lg-color" style="background:${COLORS.smart[i%COLORS.smart.length]}"></div>${g.name}</div>`).join('')+`<div class="lg-item"><div class="lg-color" style="background:#374151"></div>Ungrouped</div>`;
+    if(this.state.layout==='cluster'){
+      this.applyCluster();
+    } else {
+      this.smoothGroupTransition(true);
+    }
+    this.stats();
+  },
+
+  smartBridges(){
+    const dt={};
+    NODES.forEach(n=>n.tags.forEach(t=>{if(!dt[t])dt[t]=new Set();dt[t].add(n.dept)}));
+    const bt=Object.entries(dt).filter(([,d])=>d.size>=3).map(([t])=>t);
+    const seeds=this.shuffle(bt).slice(0,5);
+    return seeds.map(s=>{const m=NODES.filter(n=>n.tags.includes(s));const ds=[...new Set(m.map(n=>n.dept))];return{name:s.charAt(0).toUpperCase()+s.slice(1)+' Network',ids:m.map(n=>n.id),why:`${m.length} nodes share "${s}" across ${ds.join(', ')}.`}}).filter(g=>g.ids.length>=2);
+  },
+  smartTensions(){
+    const ts=[
+      {name:'Control ↔ Freedom',a:['control','steering','systems','infrastructure'],b:['autonomy','freedom','agency','exploration','serendipity'],why:'Your work constantly negotiates the boundary between designed constraint and human freedom.'},
+      {name:'Precision ↔ Chaos',a:['precision','detail','clean','minimal','refinement','perfection'],b:['accident','unexpected','strange','weird','surrealism','dream'],why:'Your aesthetic oscillates between mathematical precision and dreamlike strangeness.'},
+      {name:'Visible ↔ Invisible',a:['visible','showing','reveal','signals','surface'],b:['invisible','hidden','background','infrastructure','unseen','subtle'],why:'Making the hidden visible without literally showing — this paradox drives your formal decisions.'},
+      {name:'Making ↔ Thinking',a:['making','hands-on','craft','material','physical','production'],b:['research','analysis','conceptual','thinking','knowledge','reflection'],why:'Research-by-making vs desk research. Your strongest work bridges both.'},
+      {name:'Perfect ↔ Imperfect',a:['perfection','precision','quality','detail','refinement'],b:['imperfection','failure','learning','speed','experiment','accident'],why:'Your documented strength (precision) is also your documented limitation.'},
+    ];
+    return this.shuffle(ts).slice(0,4).map(t=>{const m=NODES.filter(n=>t.a.some(x=>n.tags.includes(x))||t.b.some(x=>n.tags.includes(x)));return{name:t.name,ids:m.map(n=>n.id),why:t.why}});
+  },
+  smartMethods(){
+    const ms=[
+      {name:'Iterative Refiners',t:['iteration','samples','refinement','variation','versions'],why:'Nodes connected by iterative methodology — your dominant working pattern.'},
+      {name:'System Builders',t:['systems','infrastructure','architecture','structure','modular'],why:'Projects sharing systems-thinking — designing relationships between parts.'},
+      {name:'Experience Designers',t:['experience','feeling','perception','embodied','rhythm','sequence'],why:'Work prioritizing felt experience over visual form.'},
+      {name:'Material Investigators',t:['material','fiber','surface','physical','tactile','process'],why:'Research centered on understanding material behaviour through direct engagement.'},
+      {name:'Boundary Walkers',t:['threshold','boundary','edge','transition','liminal','tipping-point'],why:'Ideas exploring edges, transitions, and in-between states.'},
+    ];
+    return this.shuffle(ms).slice(0,4).map(m=>{const mem=NODES.filter(n=>m.t.filter(x=>n.tags.includes(x)).length>=2);return{name:m.name,ids:mem.map(n=>n.id),why:m.why}}).filter(g=>g.ids.length>=2);
+  },
+  smartArcs(){
+    return[
+      {name:'Y1S1 — Foundations',ids:NODES.filter(n=>n.year===1&&n.sem===1).map(n=>n.id),why:'First encounters with materials, media, and methods.'},
+      {name:'Y1S2 — Expansion',ids:NODES.filter(n=>n.year===1&&n.sem===2).map(n=>n.id),why:'Broadening the toolkit: new materials, new scales.'},
+      {name:'Y2S1 — Integration',ids:NODES.filter(n=>n.year===2&&n.sem===1).map(n=>n.id),why:'Themes from earlier semesters start connecting.'},
+      {name:'Overarching Threads',ids:NODES.filter(n=>n.year===0&&n.type==='theme').map(n=>n.id),why:'Themes woven into your entire practice.'},
+      {name:'Living Questions',ids:NODES.filter(n=>n.type==='question').map(n=>n.id),why:'Questions that persist — driving continuous inquiry.'},
+    ].filter(g=>g.ids.length>=1);
+  },
+  smartMaterial(){
+    return[
+      {name:'Physical Makers',ids:NODES.filter(n=>n.mat==='Physical').map(n=>n.id),why:'Work grounded in physical material.'},
+      {name:'Digital Thinkers',ids:NODES.filter(n=>n.mat==='Digital').map(n=>n.id),why:'Work in digital space.'},
+      {name:'Conceptual Navigators',ids:NODES.filter(n=>n.mat==='Conceptual'&&n.type!=='question').map(n=>n.id),why:'Ideas and frameworks shaping how you see.'},
+      {name:'Hybrid Bridgers',ids:NODES.filter(n=>n.mat==='Mixed').map(n=>n.id),why:'Projects refusing to be just physical or digital.'},
+      {name:'Open Questions',ids:NODES.filter(n=>n.type==='question').map(n=>n.id),why:'Unresolved questions driving your practice.'},
+    ].filter(g=>g.ids.length>=1);
+  },
+
+  // Compute radial target positions for each node on the circle, grouped by sector with gaps
+  _computeRadialTargets(){
+    const groups={};
+    this.nodes.forEach(d=>{const g=d.group||'Other';if(!groups[g])groups[g]=[];groups[g].push(d)});
+    const names=Object.keys(groups).sort();
+    const nGroups=names.length;
+    const total=this.nodes.length;
+    const gapAngle=nGroups>1?0.12:0;
+    const totalGap=gapAngle*nGroups;
+    const usableAngle=2*Math.PI-totalGap;
+    const ringR=this.state.filter.startsWith('th-')?this.R*1.25:this.R;
+    let currentAngle=-Math.PI/2;
+    this._groupArcs=[];
+    names.forEach(name=>{
+      const arr=groups[name];
+      const groupArc=usableAngle*(arr.length/total);
+      const startA=currentAngle, endA=currentAngle+groupArc;
+      this._groupArcs.push({name,color:arr[0]?arr[0].color:'#6B7280',startAngle:startA,endAngle:endA,count:arr.length});
+      arr.forEach((d,j)=>{
+        const angle=currentAngle+groupArc*((j+0.5)/arr.length);
+        d._tx=this.cx+ringR*Math.cos(angle);
+        d._ty=this.cy+ringR*Math.sin(angle);
+      });
+      currentAngle+=groupArc+gapAngle;
+    });
+  },
+
+  // In thematic cluster mode, spread nearby labels across vertical lanes to avoid overlap
+  _computeThematicLabelOffsets(){
+    const offsets=new Map();
+    const items=this.nodes
+      .filter(d=>d.type!=='project')
+      .map(d=>({d,angle:Math.atan2(d.y-this.cy,d.x-this.cx)}))
+      .sort((a,b)=>a.angle-b.angle);
+    if(!items.length) return offsets;
+    const lanes=[3,-8,13,-16,20,-23,27,-30,34,-37];
+    const closeAngle=0.14;
+    let run=0;
+    for(let i=0;i<items.length;i++){
+      const cur=items[i];
+      const prev=i>0?items[i-1]:null;
+      if(prev&&Math.abs(cur.angle-prev.angle)<closeAngle) run++;
+      else run=0;
+      offsets.set(cur.d.id,lanes[Math.min(run,lanes.length-1)]);
+    }
+    // handle wrap-around crowding near -PI / PI seam
+    if(items.length>1){
+      const first=items[0],last=items[items.length-1];
+      const gap=(first.angle+2*Math.PI)-last.angle;
+      if(gap<closeAngle){
+        const base=offsets.get(first.d.id)||3;
+        const idx=Math.min(lanes.length-1,lanes.indexOf(base)+1);
+        offsets.set(first.d.id,lanes[idx<0?1:idx]);
+      }
+    }
+    return offsets;
+  },
+
+  // === GROUP OVERLAYS ===
+  // Physics/Web mode: draw soft blob backgrounds with blur+grain behind node groups
+  updateGroupOverlays(){
+    if(this.state.filter==='none'||(this.state.layout!=='physics'&&this.state.layout!=='web')){
+      this.hullGroup.selectAll('*').remove();
+      return;
+    }
+    const groups={};
+    this.nodes.forEach(d=>{
+      if(d.group==='_projects') return;
+      const g=d.group||'Other';
+      if(!groups[g]) groups[g]={color:d.color,pts:[]};
+      groups[g].pts.push([d.x,d.y]);
+    });
+    const pad=55;
+    const smoothLine=d3.line().curve(d3.curveBasisClosed);
+    // Smooth blobs for groups with ≥3 nodes
+    const hullData=Object.entries(groups).filter(([,v])=>v.pts.length>=3).map(([name,v])=>{
+      const hull=d3.polygonHull(v.pts);
+      if(!hull) return null;
+      const cx=d3.mean(hull,p=>p[0]),cy=d3.mean(hull,p=>p[1]);
+      const expanded=hull.map(p=>{
+        const dx=p[0]-cx,dy=p[1]-cy;
+        const dist=Math.sqrt(dx*dx+dy*dy)||1;
+        return[p[0]+dx/dist*pad,p[1]+dy/dist*pad];
+      });
+      return{name,color:v.color,path:smoothLine(expanded),cx,cy,
+        yMin:d3.min(expanded,p=>p[1])};
+    }).filter(Boolean);
+    // Groups with 1-2 nodes as blurred circles
+    const smallData=Object.entries(groups).filter(([,v])=>v.pts.length>=1&&v.pts.length<3).map(([name,v])=>{
+      const cx=d3.mean(v.pts,p=>p[0]),cy=d3.mean(v.pts,p=>p[1]);
+      return{name,color:v.color,cx,cy,r:v.pts.length===1?55:75};
+    });
+    // Draw blobs with blur+grain filter
+    const hulls=this.hullGroup.selectAll('.group-hull').data(hullData,d=>d.name);
+    hulls.exit().transition().duration(300).attr('opacity',0).remove();
+    hulls.enter().append('path').attr('class','group-hull')
+      .attr('fill',d=>d.color).attr('opacity',0)
+      .attr('filter','url(#blob-grain)')
+      .merge(hulls)
+      .attr('d',d=>d.path)
+      .transition().duration(400).attr('opacity',0.16).attr('fill',d=>d.color);
+    // Small group circles
+    const smalls=this.hullGroup.selectAll('.group-small').data(smallData,d=>d.name);
+    smalls.exit().transition().duration(300).attr('opacity',0).remove();
+    smalls.enter().append('circle').attr('class','group-small')
+      .attr('fill',d=>d.color).attr('opacity',0)
+      .attr('filter','url(#blob-grain)')
+      .merge(smalls)
+      .attr('cx',d=>d.cx).attr('cy',d=>d.cy).attr('r',d=>d.r)
+      .transition().duration(400).attr('opacity',0.16);
+    // Group name labels — above blob
+    const labelData=[
+      ...hullData.map(d=>({name:d.name,color:d.color,x:d.cx,y:d.yMin-8})),
+      ...smallData.map(d=>({name:d.name,color:d.color,x:d.cx,y:d.cy-d.r-8}))
+    ];
+    const labels=this.hullGroup.selectAll('.group-label').data(labelData,d=>d.name);
+    labels.exit().transition().duration(300).attr('opacity',0).remove();
+    labels.enter().append('text').attr('class','group-label')
+      .attr('text-anchor','middle').attr('font-size',11).attr('font-weight',700)
+      .attr('font-family','Syne, sans-serif').attr('opacity',0)
+      .attr('paint-order','stroke').attr('stroke','var(--bg)').attr('stroke-width',4)
+      .merge(labels)
+      .attr('x',d=>d.x).attr('y',d=>d.y).attr('fill',d=>d.color)
+      .text(d=>d.name)
+      .transition().duration(400).attr('opacity',0.65);
+  },
+
+  // Clear all overlays
+  clearOverlays(){
+    if(this.hullGroup) this.hullGroup.selectAll('*').transition().duration(300).attr('opacity',0).remove();
+    if(this.arcLabelGroup) this.arcLabelGroup.selectAll('*').transition().duration(300).attr('opacity',0).remove();
+  },
+
+  // === ROTARY DIAL SELECTOR (Cluster navigation) ===
+  initDial(){
+    const dial=document.getElementById('dial');
+    const self=this;
+    let startAngle=0,startDial=0;
+    const getPA=(e)=>{const r=dial.getBoundingClientRect();const cx=r.left+r.width/2,cy=r.top+r.height/2;const px=e.touches?e.touches[0].clientX:e.clientX;const py=e.touches?e.touches[0].clientY:e.clientY;return Math.atan2(py-cy,px-cx)};
+    const onStart=(e)=>{e.preventDefault();self._dialActive=true;startAngle=getPA(e);startDial=self._dialAngle;dial.style.cursor='grabbing'};
+    const onMove=(e)=>{if(!self._dialActive)return;e.preventDefault();let delta=getPA(e)-startAngle;while(delta>Math.PI)delta-=2*Math.PI;while(delta<-Math.PI)delta+=2*Math.PI;self._dialAngle=startDial+delta;document.getElementById('dialTick').style.transform=`rotate(${self._dialAngle*180/Math.PI+90}deg)`;self._scanToNearest()};
+    const onEnd=()=>{self._dialActive=false;dial.style.cursor='grab'};
+    dial.addEventListener('mousedown',onStart);
+    window.addEventListener('mousemove',onMove);
+    window.addEventListener('mouseup',onEnd);
+    dial.addEventListener('touchstart',onStart,{passive:false});
+    window.addEventListener('touchmove',onMove,{passive:false});
+    window.addEventListener('touchend',onEnd);
+    document.getElementById('dialSelect').addEventListener('click',()=>{if(self._highlightedNodeId)self.showDetail(self._highlightedNodeId)});
+    document.getElementById('dialName').addEventListener('click',()=>{if(self._highlightedNodeId)self.focusNode(self._highlightedNodeId)});
+    document.getElementById('dialPrev').addEventListener('click',()=>self._stepNode(-1));
+    document.getElementById('dialNext').addEventListener('click',()=>self._stepNode(1));
+  },
+  showDial(){
+    document.getElementById('dialWrap').classList.add('show');
+    this._sortedClusterNodes=this.nodes.slice().sort((a,b)=>{
+      const aa=Math.atan2((a._ty||a.y)-this.cy,(a._tx||a.x)-this.cx);
+      const ba=Math.atan2((b._ty||b.y)-this.cy,(b._tx||b.x)-this.cx);
+      return aa-ba;
+    });
+    this._dialAngle=-Math.PI/2;
+    document.getElementById('dialTick').style.transform='rotate(0deg)';
+    this._highlightedNodeId=null;
+    document.getElementById('dialName').textContent='';
+    document.getElementById('dialType').textContent='';
+    document.getElementById('dialType').style.background='transparent';
+  },
+  hideDial(){document.getElementById('dialWrap').classList.remove('show');this.clearScanBeam()},
+  _scanToNearest(){
+    if(this.state.layout!=='cluster')return;
+    let best=null,bestDist=Infinity;
+    this.nodes.forEach(d=>{const na=Math.atan2(d.y-this.cy,d.x-this.cx);let diff=na-this._dialAngle;while(diff>Math.PI)diff-=2*Math.PI;while(diff<-Math.PI)diff+=2*Math.PI;if(Math.abs(diff)<bestDist){bestDist=Math.abs(diff);best=d}});
+    if(best&&best.id!==this._highlightedNodeId){
+      this._highlightedNodeId=best.id;
+      document.getElementById('dialName').textContent=best.title;
+      const dt=document.getElementById('dialType');dt.textContent=best.type.toUpperCase();dt.style.background=best.color;
+      this._applyScanHighlight(best);
+    }
+  },
+  _stepNode(dir){
+    if(this.state.layout!=='cluster'||!this._sortedClusterNodes.length)return;
+    let idx=this._sortedClusterNodes.findIndex(d=>d.id===this._highlightedNodeId);
+    if(idx<0)idx=0;else idx+=dir;
+    if(idx<0)idx=this._sortedClusterNodes.length-1;
+    if(idx>=this._sortedClusterNodes.length)idx=0;
+    const node=this._sortedClusterNodes[idx];
+    this._highlightedNodeId=node.id;
+    this._dialAngle=Math.atan2(node.y-this.cy,node.x-this.cx);
+    document.getElementById('dialTick').style.transform=`rotate(${this._dialAngle*180/Math.PI+90}deg)`;
+    document.getElementById('dialName').textContent=node.title;
+    const dt=document.getElementById('dialType');dt.textContent=node.type.toUpperCase();dt.style.background=node.color;
+    this._applyScanHighlight(node);
+  },
+  _applyScanHighlight(node){
+    this.nodeSel.select('circle').transition().duration(150)
+      .attr('r',d=>d.id===node.id?d.r*1.5:d.r)
+      .attr('fill-opacity',d=>d.id===node.id?1:0.3)
+      .attr('stroke-width',d=>d.id===node.id?3:1.5)
+      .attr('stroke-opacity',d=>d.id===node.id?1:0.2);
+    this.nodeSel.select('text').transition().duration(150)
+      .attr('opacity',d=>d.id===node.id?1:0.1);
+    const conn=new Set();
+    this.links.forEach(l=>{const s=typeof l.source==='object'?l.source.id:l.source;const t=typeof l.target==='object'?l.target.id:l.target;if(s===node.id&&l.weight>=this.state.threshold)conn.add(t);if(t===node.id&&l.weight>=this.state.threshold)conn.add(s)});
+    this.linkSel.transition().duration(150)
+      .attr('opacity',l=>{const s=typeof l.source==='object'?l.source.id:l.source;const t=typeof l.target==='object'?l.target.id:l.target;return(s===node.id||t===node.id)&&l.weight>=this.state.threshold?0.5:0.03})
+      .attr('stroke',l=>{const s=typeof l.source==='object'?l.source.id:l.source;const t=typeof l.target==='object'?l.target.id:l.target;return(s===node.id||t===node.id)&&l.weight>=this.state.threshold?node.color:(this.state.theme==='dark'?'rgba(255,255,255,0.18)':'rgba(0,0,0,0.12)')});
+    this._drawScanBeam(node);
+  },
+  _drawScanBeam(node){
+    if(!this._scanGroup)return;
+    this._scanGroup.selectAll('*').remove();
+    this._scanGroup.append('line').attr('x1',this.cx).attr('y1',this.cy).attr('x2',node.x).attr('y2',node.y)
+      .attr('stroke',node.color).attr('stroke-width',1.5).attr('stroke-dasharray','6,4').attr('opacity',0.4);
+    this._scanGroup.append('circle').attr('cx',node.x).attr('cy',node.y).attr('r',node.r+10)
+      .attr('fill','none').attr('stroke',node.color).attr('stroke-width',2).attr('opacity',0.6).attr('stroke-dasharray','4,3');
+    this._scanGroup.append('circle').attr('cx',this.cx).attr('cy',this.cy).attr('r',4)
+      .attr('fill',node.color).attr('opacity',0.3);
+  },
+  clearScanBeam(){
+    if(this._scanGroup)this._scanGroup.selectAll('*').remove();
+    this._highlightedNodeId=null;
+  },
+  _restoreScanHighlight(){
+    if(this.state.layout==='cluster'&&this._highlightedNodeId){
+      const node=this.nodes.find(d=>d.id===this._highlightedNodeId);
+      if(node)setTimeout(()=>this._applyScanHighlight(node),60);
+    }
+  },
+
+  // Cluster mode: draw group names as curved text on a circle
+  // HORIZONTAL split: top half (above center) → inward, bottom half (below center) → outward
+  updateArcLabels(){
+    if(!this._groupArcs||this.state.filter==='none'){
+      this.arcLabelGroup.selectAll('*').remove();
+      return;
+    }
+    this.arcLabelGroup.selectAll('*').remove();
+    const ringR=this.state.filter.startsWith('th-')?this.R*1.25:this.R;
+    const isThematic=this.state.filter.startsWith('th-');
+
+    // Arc band just outside nodes
+    const arcInner=ringR+2;
+    const arcOuter=ringR+(isThematic?6:12);
+    const bandArc=d3.arc().innerRadius(arcInner).outerRadius(arcOuter);
+    const uid='arcL'+Date.now();
+
+    const fontSize=isThematic?10:8.5;
+    const visibleArcs=this._groupArcs.filter(g=>g.name!=='_projects');
+    // Desired visual distance from center — far enough to avoid topic word conflicts
+    const labelDist=isThematic?ringR+140:ringR+80;
+    // Compensate so top and bottom text centers align at the same distance
+    const baselineShift=fontSize*0.35;
+    const topPathR=labelDist-baselineShift;    // CW: text on outside → appears at labelDist
+    const botPathR=labelDist+baselineShift;    // CCW: text on inside → appears at labelDist
+
+    visibleArcs.forEach((g,idx)=>{
+      const grp=this.arcLabelGroup.append('g');
+      const midAngle=(g.startAngle+g.endAngle)/2;
+
+      // 1) Colored arc band
+      grp.append('path')
+        .attr('d',bandArc({startAngle:g.startAngle+Math.PI/2,endAngle:g.endAngle+Math.PI/2}))
+        .attr('transform',`translate(${this.cx},${this.cy})`)
+        .attr('fill',g.color).attr('opacity',isThematic?0.45:0.2)
+        .attr('stroke','none');
+
+      // 2) Dashed leader line
+      const lineStart=arcOuter+2, lineEnd=labelDist-6;
+      grp.append('line')
+        .attr('x1',this.cx+lineStart*Math.cos(midAngle))
+        .attr('y1',this.cy+lineStart*Math.sin(midAngle))
+        .attr('x2',this.cx+lineEnd*Math.cos(midAngle))
+        .attr('y2',this.cy+lineEnd*Math.sin(midAngle))
+        .attr('stroke',g.color).attr('stroke-width',0.6)
+        .attr('stroke-opacity',0.2).attr('stroke-dasharray','2,3');
+
+      // 3) HORIZONTAL split: sin(midAngle) > 0 means below center in SVG
+      const isBottom=Math.sin(midAngle)>0;
+      const pathId=`${uid}-${idx}`;
+      const textR=isBottom?botPathR:topPathR;
+
+      // Make the path a FULL SEMICIRCLE (π radians) centered on midAngle.
+      const halfSpan=Math.PI/2;
+      const pStart=midAngle-halfSpan;
+      const pEnd=midAngle+halfSpan;
+
+      if(isBottom){
+        const sx=this.cx+textR*Math.cos(pEnd),   sy=this.cy+textR*Math.sin(pEnd);
+        const ex=this.cx+textR*Math.cos(pStart),  ey=this.cy+textR*Math.sin(pStart);
+        grp.append('path').attr('id',pathId)
+          .attr('d',`M${sx},${sy} A${textR},${textR} 0 0,0 ${ex},${ey}`)
+          .attr('fill','none').attr('stroke','none');
+      } else {
+        const sx=this.cx+textR*Math.cos(pStart),  sy=this.cy+textR*Math.sin(pStart);
+        const ex=this.cx+textR*Math.cos(pEnd),    ey=this.cy+textR*Math.sin(pEnd);
+        grp.append('path').attr('id',pathId)
+          .attr('d',`M${sx},${sy} A${textR},${textR} 0 0,1 ${ex},${ey}`)
+          .attr('fill','none').attr('stroke','none');
+      }
+
+      // 4) Text — no dy needed, path radii are pre-compensated
+      const txt=grp.append('text')
+        .attr('font-size',fontSize)
+        .attr('font-weight',600)
+        .attr('font-family','Syne, sans-serif')
+        .attr('letter-spacing','0.8px')
+        .attr('fill',g.color).attr('opacity',isThematic?0.9:0.65);
+      txt.append('textPath')
+        .attr('href',`#${pathId}`)
+        .attr('startOffset','50%')
+        .attr('text-anchor','middle')
+        .text(g.name);
+
+      // Small dot at arc band midpoint
+      grp.append('circle')
+        .attr('cx',this.cx+(arcOuter+1)*Math.cos(midAngle))
+        .attr('cy',this.cy+(arcOuter+1)*Math.sin(midAngle))
+        .attr('r',2).attr('fill',g.color).attr('opacity',0.6);
+    });
+
+    // Fade in
+    this.arcLabelGroup.attr('opacity',0).transition().duration(600).ease(d3.easeCubicOut).attr('opacity',1);
+  },
+
+  // Smooth morph transition when switching filters (physics mode only)
+  smoothGroupTransition(active){
+    // Compute target group centers
+    const targetCenters={};
+    if(active){
+      const groups={};
+      this.nodes.forEach(d=>{const g=d.group||'Other';if(!groups[g])groups[g]=[];groups[g].push(d)});
+      const names=Object.keys(groups).sort();
+      const n=names.length;
+      const R=Math.min(this.width,this.height)*0.42;
+      names.forEach((name,i)=>{
+        const angle=2*Math.PI*i/n-Math.PI/2;
+        targetCenters[name]={x:this.cx+R*Math.cos(angle),y:this.cy+R*Math.sin(angle)};
+      });
+    }
+    // Store current positions
+    this.nodes.forEach(d=>{d._gsx=d.x;d._gsy=d.y});
+    // Apply the new forces
+    this.applyGroupForce(active);
+    // Run a hidden sim tick batch to compute approximate targets
+    this.sim.stop();
+    // Clone positions, run 80 ticks to find targets, restore
+    const saved=this.nodes.map(d=>({x:d.x,y:d.y,vx:d.vx,vy:d.vy}));
+    this.sim.alpha(0.6);
+    for(let i=0;i<80;i++) this.sim.tick();
+    this.nodes.forEach((d,i)=>{d._gtx=d.x;d._gty=d.y;d.x=saved[i].x;d.y=saved[i].y;d.vx=saved[i].vx;d.vy=saved[i].vy});
+    // Animate interpolation
+    const dur=700;
+    const ease=d3.easeCubicInOut;
+    const timer=d3.timer(elapsed=>{
+      const t=Math.min(1,ease(elapsed/dur));
+      this.nodes.forEach(d=>{
+        d.x=d._gsx+(d._gtx-d._gsx)*t;
+        d.y=d._gsy+(d._gty-d._gsy)*t;
+      });
+      // Update link paths
+      this.linkSel.attr('d',d=>{
+        const sx=d.source.x,sy=d.source.y,tx=d.target.x,ty=d.target.y;
+        const mx=(sx+tx)/2,my=(sy+ty)/2;
+        const dx=tx-sx,dy=ty-sy;
+        const dist=Math.sqrt(dx*dx+dy*dy)||1;
+        const px=-dy/dist,py=dx/dist;
+        const fan=(d.curveFan||0)*dist*0.3;
+        const pull=0.35;
+        const cpx=mx+(this.cx-mx)*pull+px*fan;
+        const cpy=my+(this.cy-my)*pull+py*fan;
+        return `M${sx},${sy} Q${cpx},${cpy} ${tx},${ty}`;
+      });
+      this.nodeSel.attr('transform',d=>`translate(${d.x},${d.y})`);
+      if(t>=1){
+        timer.stop();
+        // Now let the sim run normally from these positions
+        this.sim.alpha(0.3).restart();
+      }
+    });
+  },
+
+  // === GROUP FORCE (pull same-group nodes together) ===
+  applyGroupForce(active){
+    if(!active){
+      this.sim.force('groupX',null).force('groupY',null);
+      this.sim.force('x',d3.forceX(this.cx).strength(0.01));
+      this.sim.force('y',d3.forceY(this.cy).strength(0.01));
+    } else {
+      // Compute group centers arranged in a circle
+      const groups={};
+      this.nodes.forEach(d=>{const g=d.group||'Other';if(!groups[g])groups[g]=[];groups[g].push(d)});
+      const names=Object.keys(groups).sort();
+      const n=names.length;
+      const R=Math.min(this.width,this.height)*0.42;
+      const centers={};
+      names.forEach((name,i)=>{
+        const angle=2*Math.PI*i/n-Math.PI/2;
+        centers[name]={x:this.cx+R*Math.cos(angle),y:this.cy+R*Math.sin(angle)};
+      });
+      this.sim
+        .force('groupX',d3.forceX(d=>centers[d.group||'Other']?.x||this.cx).strength(0.25))
+        .force('groupY',d3.forceY(d=>centers[d.group||'Other']?.y||this.cy).strength(0.25));
+      this.sim.force('x',d3.forceX(this.cx).strength(0.003));
+      this.sim.force('y',d3.forceY(this.cy).strength(0.003));
+    }
+    this.sim.alpha(0.7).restart();
+  },
+
+  // === LAYOUT (smooth morph transitions) ===
+  toggleLayout(){
+    const cycle={physics:'cluster',cluster:'physics'};
+    const icons={physics:'⚡',cluster:'📌'};
+    const labels={physics:'Physics',cluster:'Cluster'};
+    this.state.layout=cycle[this.state.layout]||'physics';
+    document.getElementById('layIco').textContent=icons[this.state.layout];
+    document.getElementById('layLbl').textContent=labels[this.state.layout];
+    if(this.state.layout==='cluster') this.morphToRadialCircle();
+    else this.morphToPhysics();
+  },
+
+  morphToPhysics(){
+    // Smooth morph back to force-directed
+    this.hideDial();
+    this.sim.stop();
+    this._morphingLayout=true;
+    // Release pins
+    this.nodes.forEach(d=>{d.fx=null;d.fy=null});
+    // Clear arc labels (cluster mode overlays), hulls will auto-draw on tick
+    if(this.arcLabelGroup) this.arcLabelGroup.selectAll('*').transition().duration(300).attr('opacity',0).remove();
+    // Restore all node visibility (flow mode hides themes/questions)
+    this.nodeSel.transition().duration(400).style('opacity',1);
+    // Hide tree elements if visible
+    if(this.treeGroup) this.treeGroup.transition().duration(300).style('opacity',0);
+    // Restore link visibility (also restore display)
+    this.linkSel.style('display',null);
+    this.linkSel.transition().duration(400).attr('opacity',d=>d.weight<this.state.threshold?0:Math.min(0.3+d.weight*0.06,0.55));
+    // Store current radii for smooth interpolation from any layout
+    this.nodeSel.select('circle').each(function(d){d._fromR=+d3.select(this).attr('r')});
+    // Synchronized circle shrink + label morph via timer
+    const morphDur=700;
+    const morphEase=d3.easeCubicInOut;
+    const morphTimer=d3.timer(elapsed=>{
+      const t=Math.min(1,morphEase(elapsed/morphDur));
+      // Interpolate circle radius to dot size
+      this.nodeSel.select('circle')
+        .attr('r',d=>(d._fromR||d.r)+(d.dr-(d._fromR||d.r))*t)
+        .attr('fill-opacity',1)
+        .attr('stroke-width',2+(1.5-2)*t);
+      // Interpolate labels to beside-dot style
+      const cr=d=>(d._fromR||d.r)+(d.dr-(d._fromR||d.r))*t;
+      this.nodeSel.select('text')
+        .attr('text-anchor','start')
+        .attr('dx',d=>cr(d)+5)
+        .attr('dy',3);
+      if(t>=1){
+        morphTimer.stop();
+        this._morphingLayout=false;
+      }
+    });
+    // Restore force-directed forces
+    this.sim.force('radial',null);
+    this.sim.force('link',d3.forceLink(this.links).id(d=>d.id).distance(d=>Math.max(120-d.weight*8,50)).strength(d=>Math.min(d.weight*0.02,0.1)));
+    this.sim.force('charge',d3.forceManyBody().strength(-280).distanceMax(500).theta(0.9));
+    this.sim.force('center',d3.forceCenter(this.cx,this.cy).strength(0.04));
+    this.sim.force('collision',d3.forceCollide().radius(d=>{
+      const label=d.type==='question'?('? '+d.title):d.title;
+      const textW=Math.min(label.length*4.5,100);
+      return Math.max(d.dr+3,textW/2);
+    }).strength(0.7).iterations(2));
+    // Restore group forces if active filter
+    if(this.state.filter!=='none'){
+      const groups={};
+      this.nodes.forEach(d=>{const g=d.group||'Other';if(!groups[g])groups[g]=[];groups[g].push(d)});
+      const names=Object.keys(groups).sort();
+      const n=names.length;
+      const R=Math.min(this.width,this.height)*0.42;
+      const centers={};
+      names.forEach((name,i)=>{
+        const angle=2*Math.PI*i/n-Math.PI/2;
+        centers[name]={x:this.cx+R*Math.cos(angle),y:this.cy+R*Math.sin(angle)};
+      });
+      this.sim
+        .force('groupX',d3.forceX(d=>centers[d.group||'Other']?.x||this.cx).strength(0.35))
+        .force('groupY',d3.forceY(d=>centers[d.group||'Other']?.y||this.cy).strength(0.35));
+      this.sim.force('x',d3.forceX(this.cx).strength(0.003));
+      this.sim.force('y',d3.forceY(this.cy).strength(0.003));
+    } else {
+      this.sim.force('groupX',null).force('groupY',null);
+      this.sim.force('x',d3.forceX(this.cx).strength(0.01));
+      this.sim.force('y',d3.forceY(this.cy).strength(0.01));
+    }
+    this.sim.alpha(0.6).restart();
+  },
+
+  morphToRadialCircle(){
+    // Clear physics hulls
+    if(this.hullGroup) this.hullGroup.selectAll('*').transition().duration(300).attr('opacity',0).remove();
+    // Restore all node visibility (flow mode hides themes/questions)
+    this.nodeSel.transition().duration(300).style('opacity',1);
+    // Hide tree elements if visible
+    if(this.treeGroup) this.treeGroup.transition().duration(300).style('opacity',0);
+    // Restore link visibility
+    this.linkSel.style('display',null);
+    this.linkSel.transition().duration(300).attr('opacity',d=>d.weight<this.state.threshold?0:Math.min(0.3+d.weight*0.06,0.55));
+    // Compute radial circle targets — grouped sectors on one big circle
+    this._computeRadialTargets();
+    const targets={};
+    this.nodes.forEach(d=>{targets[d.id]={x:d._tx,y:d._ty}});
+    // Smooth morph from current positions — synchronized size + position
+    this.sim.stop();
+    this._morphingLayout=true;
+    const dur=900;
+    this.nodes.forEach(d=>{d._sx=d.x;d._sy=d.y});
+    const ease=d3.easeCubicInOut;
+    const timer=d3.timer(elapsed=>{
+      const t=Math.min(1,ease(elapsed/dur));
+      this.nodes.forEach(d=>{
+        const tgt=targets[d.id];
+        if(tgt){d.x=d._sx+(tgt.x-d._sx)*t;d.y=d._sy+(tgt.y-d._sy)*t;}
+      });
+      // Interpolate circle size from dot to full circle — in sync with position
+      this.nodeSel.select('circle')
+        .attr('r',d=>d.dr+(d.r-d.dr)*t)
+        .attr('fill-opacity',1)
+        .attr('stroke-width',1.5+(2-1.5)*t);
+      // Update links — sweeping arcs through center
+      this.linkSel.attr('d',d=>{
+        const sx=d.source.x,sy=d.source.y,tx=d.target.x,ty=d.target.y;
+        const mx=(sx+tx)/2,my=(sy+ty)/2;
+        const dx=tx-sx,dy=ty-sy;
+        const dist=Math.sqrt(dx*dx+dy*dy)||1;
+        const px=-dy/dist,py=dx/dist;
+        const fan=(d.curveFan||0)*dist*0.3;
+        const pull=0.35;
+        const cpx=mx+(this.cx-mx)*pull+px*fan;
+        const cpy=my+(this.cy-my)*pull+py*fan;
+        return `M${sx},${sy} Q${cpx},${cpy} ${tx},${ty}`;
+      });
+      // Radial label rotation — use interpolated radius for dx
+      const curR=d=>d.dr+(d.r-d.dr)*t;
+      this.nodeSel.attr('transform',d=>{
+        const angle=Math.atan2(d.y-this.cy,d.x-this.cx)*180/Math.PI;
+        const flip=angle>90||angle<-90;
+        return `translate(${d.x},${d.y}) rotate(${flip?angle+180:angle})`;
+      });
+      this.nodeSel.select('text').attr('text-anchor',d=>{
+        const angle=Math.atan2(d.y-this.cy,d.x-this.cx)*180/Math.PI;
+        return (angle>90||angle<-90)?'end':'start';
+      }).attr('dx',d=>{
+        const angle=Math.atan2(d.y-this.cy,d.x-this.cx)*180/Math.PI;
+        return (angle>90||angle<-90)?-(curR(d)+6):(curR(d)+6);
+      }).attr('dy',3);
+      if(t>=1){
+        timer.stop();
+        this._morphingLayout=false;
+        // Pin nodes and switch to radial simulation
+        this.nodes.forEach(d=>{const tgt=targets[d.id];if(tgt){d.fx=tgt.x;d.fy=tgt.y;}});
+        // Set up radial forces for when nodes are dragged
+        this.sim.force('link',null);
+        this.sim.force('charge',d3.forceManyBody().strength(-20).distanceMax(100));
+        this.sim.force('center',null);
+        this.sim.force('collision',d3.forceCollide().radius(d=>d.r+4).strength(0.5).iterations(1));
+        this.sim.force('radial',null);
+        this.sim.force('groupX',d3.forceX(d=>d._tx||this.cx).strength(0.3));
+        this.sim.force('groupY',d3.forceY(d=>d._ty||this.cy).strength(0.3));
+        this.sim.alpha(0.05).restart();
+        // Show arc labels on outer ring
+        if(this.state.filter!=='none') this.updateArcLabels();
+        // Show rotary dial selector
+        this.showDial();
+      }
+    });
+  },
+
+  applyCluster(){
+    // When already in cluster mode and filter changes, animate to new positions
+    this._computeRadialTargets();
+    const targets={};
+    this.nodes.forEach(d=>{targets[d.id]={x:d._tx,y:d._ty}});
+    // Ensure circles are big + update colors
+    this.nodeSel.select('circle').transition().duration(600)
+      .attr('r',d=>d.r)
+      .attr('fill',d=>d.color)
+      .attr('stroke',d=>d.color);
+    // Release pins so we can interpolate
+    this.nodes.forEach(d=>{d.fx=null;d.fy=null});
+    this.sim.stop();
+    // Smooth interpolation from current to new radial positions
+    const dur=800;
+    this.nodes.forEach(d=>{d._sx=d.x;d._sy=d.y});
+    const ease=d3.easeCubicInOut;
+    const timer=d3.timer(elapsed=>{
+      const t=Math.min(1,ease(elapsed/dur));
+      this.nodes.forEach(d=>{
+        const tgt=targets[d.id];
+        if(tgt){d.x=d._sx+(tgt.x-d._sx)*t;d.y=d._sy+(tgt.y-d._sy)*t;}
+      });
+      // Update links
+      this.linkSel.attr('d',d=>{
+        const sx=d.source.x,sy=d.source.y,tx=d.target.x,ty=d.target.y;
+        const mx=(sx+tx)/2,my=(sy+ty)/2;
+        const dx=tx-sx,dy=ty-sy;
+        const dist=Math.sqrt(dx*dx+dy*dy)||1;
+        const px=-dy/dist,py=dx/dist;
+        const fan=(d.curveFan||0)*dist*0.3;
+        const pull=0.35;
+        const cpx=mx+(this.cx-mx)*pull+px*fan;
+        const cpy=my+(this.cy-my)*pull+py*fan;
+        return `M${sx},${sy} Q${cpx},${cpy} ${tx},${ty}`;
+      });
+      // Radial label rotation during animation
+      this.nodeSel.attr('transform',d=>{
+        const angle=Math.atan2(d.y-this.cy,d.x-this.cx)*180/Math.PI;
+        const flip=angle>90||angle<-90;
+        return `translate(${d.x},${d.y}) rotate(${flip?angle+180:angle})`;
+      });
+      this.nodeSel.select('text').attr('text-anchor',d=>{
+        const angle=Math.atan2(d.y-this.cy,d.x-this.cx)*180/Math.PI;
+        return (angle>90||angle<-90)?'end':'start';
+      }).attr('dx',d=>{
+        const angle=Math.atan2(d.y-this.cy,d.x-this.cx)*180/Math.PI;
+        return (angle>90||angle<-90)?-(d.r+6):(d.r+6);
+      }).attr('dy',3);
+      if(t>=1){
+        timer.stop();
+        // Pin at final positions
+        this.nodes.forEach(d=>{const tgt=targets[d.id];if(tgt){d.fx=tgt.x;d.fy=tgt.y;}});
+        this.sim.force('groupX',d3.forceX(d=>d._tx||this.cx).strength(0.3));
+        this.sim.force('groupY',d3.forceY(d=>d._ty||this.cy).strength(0.3));
+        this.sim.alpha(0.05).restart();
+        // Update arc labels for new grouping
+        if(this.state.filter!=='none') this.updateArcLabels();
+        // Update rotary dial sorted nodes
+        this._sortedClusterNodes=this.nodes.slice().sort((a,b)=>{
+          const aa=Math.atan2((a._ty||a.y)-this.cy,(a._tx||a.x)-this.cx);
+          const ba=Math.atan2((b._ty||b.y)-this.cy,(b._tx||b.x)-this.cx);
+          return aa-ba;
+        });
+      }
+    });
+  },
+
+  // === VIEW CONTROLS ===
+  centerView(){
+    this.svg.transition().duration(500).call(this.zoom.transform,d3.zoomIdentity);
+  },
+
+  fitView(){
+    // Compute bounding box of all nodes
+    let minX=Infinity,minY=Infinity,maxX=-Infinity,maxY=-Infinity;
+    this.nodes.forEach(d=>{
+      const r=this.state.layout==='cluster'?d.r:d.dr;
+      if(d.x-r<minX) minX=d.x-r;
+      if(d.y-r<minY) minY=d.y-r;
+      if(d.x+r>maxX) maxX=d.x+r;
+      if(d.y+r>maxY) maxY=d.y+r;
+    });
+    const pad=60;
+    minX-=pad;minY-=pad;maxX+=pad;maxY+=pad;
+    const bw=maxX-minX, bh=maxY-minY;
+    if(bw<=0||bh<=0) return;
+    const scale=Math.min(this.width/bw,this.height/bh,2);
+    const tx=this.width/2-(minX+bw/2)*scale;
+    const ty=this.height/2-(minY+bh/2)*scale;
+    const t=d3.zoomIdentity.translate(tx,ty).scale(scale);
+    this.svg.transition().duration(600).call(this.zoom.transform,t);
+  },
+
+  // === SEARCH ===
+  initSearch(){
+    this.fuse=new Fuse(NODES,{keys:[{name:'title',weight:.4},{name:'desc',weight:.2},{name:'tags',weight:.25},{name:'course',weight:.15}],threshold:.4,distance:100,includeMatches:true,minMatchCharLength:2});
+  },
+
+  search(q){
+    const el=document.getElementById('searchRes');
+    if(!q||q.length<2){el.classList.remove('show');return;}
+    const r=this.fuse.search(q).slice(0,12);
+    if(!r.length){el.innerHTML='<div class="sr-item" style="color:var(--text3)">No results</div>';el.classList.add('show');return;}
+    el.innerHTML=r.map(x=>`<div class="sr-item" onclick="W.focusNode('${x.item.id}')"><span class="sr-type" style="background:${COLORS.type[x.item.type]}">${x.item.type}</span><span class="sr-title">${x.item.title}</span></div>`).join('');
+    el.classList.add('show');
+  },
+
+  focusNode(id){
+    document.getElementById('searchRes').classList.remove('show');
+    document.getElementById('searchIn').value='';
+    const d=this.nodes.find(n=>n.id===id);
+    if(!d)return;
+    // Zoom to node
+    const t=d3.zoomIdentity.translate(this.width/2-d.x*1.5,this.height/2-d.y*1.5).scale(1.5);
+    this.svg.transition().duration(600).call(this.zoom.transform,t);
+    // Pulse
+    const pr=this.state.layout==='cluster'?d.r:d.dr;
+    this.nodeSel.filter(n=>n.id===id).select('circle')
+      .transition().duration(200).attr('r',pr*2).attr('stroke-width',4)
+      .transition().duration(300).attr('r',pr*1.4)
+      .transition().duration(200).attr('r',pr).attr('stroke-width',this.state.layout==='cluster'?2:1.5);
+    this.showDetail(id);
+  },
+
+  // === DETAIL ===
+  showDetail(id){
+    this.state.selected=id;
+    const p=document.getElementById('detailPanel'),c=document.getElementById('detailInner');
+    const d=NODES.find(n=>n.id===id);if(!d)return;
+    const tc=COLORS.type[d.type]||'#6B7280';
+    // Find connections
+    const conns=[];
+    this.links.forEach(l=>{
+      const s=typeof l.source==='object'?l.source.id:l.source;
+      const t=typeof l.target==='object'?l.target.id:l.target;
+      if(l.weight>=this.state.threshold){
+        if(s===id){const n=NODES.find(x=>x.id===t);if(n)conns.push({id:t,title:n.title,type:n.type,w:l.weight})}
+        if(t===id){const n=NODES.find(x=>x.id===s);if(n)conns.push({id:s,title:n.title,type:n.type,w:l.weight})}
+      }
+    });
+    conns.sort((a,b)=>b.w-a.w);
+    c.innerHTML=`<button class="d-close" onclick="W.closeDetail()">✕</button>
+      <div class="d-badge" style="background:${tc}">${d.type}</div>
+      <div class="d-title">${d.title}</div>
+      <div class="d-desc">${d.desc||'No description yet.'}</div>
+      <div class="d-meta">
+        ${d.course?`<span class="d-ml">Course</span><span class="d-mv">${d.course}</span>`:''}
+        <span class="d-ml">Dept</span><span class="d-mv">${d.dept}</span>
+        ${d.year?`<span class="d-ml">Period</span><span class="d-mv">Y${d.year} S${d.sem}</span>`:''}
+        <span class="d-ml">Material</span><span class="d-mv">${d.mat}</span>
+        <span class="d-ml">Discipline</span><span class="d-mv">${d.disc}</span>
+        <span class="d-ml">Skill</span><span class="d-mv">${d.skill}</span>
+      </div>
+      <div class="d-tags">${(d.tags||[]).map(t=>`<span class="tag">${t}</span>`).join('')}</div>
+      ${conns.length?`<div class="d-ct">Connected (${conns.length})</div>${conns.slice(0,20).map(c=>`<div class="d-conn" onclick="W.focusNode('${c.id}')"><span class="dot" style="background:${COLORS.type[c.type]}"></span>${c.title}<span style="margin-left:auto;color:var(--text3);font-size:10px">${c.w}</span></div>`).join('')}`:''}`;
+    p.classList.add('open');
+  },
+
+  closeDetail(){document.getElementById('detailPanel').classList.remove('open');this.state.selected=null},
+
+  // === THEME ===
+  toggleTheme(){
+    this.state.theme=this.state.theme==='dark'?'light':'dark';
+    document.documentElement.setAttribute('data-theme',this.state.theme);
+    localStorage.setItem('ww-theme',this.state.theme);
+    this.updateThemeIcon();
+    const lc=this.state.theme==='dark'?'rgba(255,255,255,0.18)':'rgba(0,0,0,0.12)';
+    this.linkSel.attr('stroke',lc).attr('fill','none');
+    this.nodeSel.select('text').attr('fill','var(--text)');
+  },
+  updateThemeIcon(){document.getElementById('themeBtn').textContent=this.state.theme==='dark'?'☀':'🌙'},
+
+  // === EXPORT ===
+  exportJSON(){
+    const b=new Blob([JSON.stringify(NODES,null,2)],{type:'application/json'});
+    const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=`wordweb-${new Date().toISOString().slice(0,10)}.json`;a.click();
+  },
+  importDialog(){document.getElementById('importFile').click()},
+  handleImport(e){
+    const f=e.target.files[0];if(!f)return;
+    const r=new FileReader();
+    r.onload=ev=>{
+      try{
+        const d=JSON.parse(ev.target.result);if(!Array.isArray(d))throw new Error('Bad format');
+        NODES.length=0;d.forEach(n=>NODES.push(n));
+        this.buildGraph();this.setFilter(this.state.filter);this.stats();
+        alert('Imported '+d.length+' nodes!');
+      }catch(err){alert('Import failed: '+err.message)}
+    };r.readAsText(f);e.target.value='';
+  },
+  exportPNG(){
+    const svgEl=document.getElementById('svg');
+    const clone=svgEl.cloneNode(true);
+    const bb=this.g.node().getBBox();
+    const pad=20;
+    clone.setAttribute('viewBox',`${bb.x-pad} ${bb.y-pad} ${bb.width+pad*2} ${bb.height+pad*2}`);
+    clone.setAttribute('width',bb.width+pad*2);clone.setAttribute('height',bb.height+pad*2);
+    // Remove zoom transform from cloned g so content is at origin
+    const cloneG=clone.querySelector('g');
+    if(cloneG) cloneG.removeAttribute('transform');
+    // Inline styles
+    clone.querySelectorAll('.node-label').forEach(el=>{
+      el.style.fill=this.state.theme==='dark'?'#f0f0f5':'#1a1a2e';
+      el.style.fontFamily='Space Grotesk,sans-serif';
+      el.setAttribute('paint-order','stroke');
+      el.setAttribute('stroke',this.state.theme==='dark'?'#0a0a0f':'#f5f0eb');
+      el.setAttribute('stroke-width','3');
+    });
+    const lc=this.state.theme==='dark'?'rgba(255,255,255,0.18)':'rgba(0,0,0,0.12)';
+    clone.querySelectorAll('.link').forEach(el=>{
+      el.setAttribute('fill','none');
+      el.setAttribute('stroke-linecap','round');
+      if(!el.getAttribute('stroke'))el.setAttribute('stroke',lc);
+      const op=el.getAttribute('opacity');
+      if(!op||op==='0')el.setAttribute('display','none');
+    });
+    // Remove scan-beam and other overlays not needed in export
+    clone.querySelectorAll('.scan-group').forEach(el=>el.remove());
+    const bg=this.state.theme==='dark'?'#0a0a0f':'#f5f0eb';
+    // Inline arc-label pill backgrounds (resolve CSS variables)
+    clone.querySelectorAll('rect[fill]').forEach(el=>{
+      const f=el.getAttribute('fill');
+      if(f&&f.includes('var('))el.setAttribute('fill',bg);
+    });
+    const rect=document.createElementNS('http://www.w3.org/2000/svg','rect');
+    rect.setAttribute('x',bb.x-pad);rect.setAttribute('y',bb.y-pad);rect.setAttribute('width',bb.width+pad*2);rect.setAttribute('height',bb.height+pad*2);rect.setAttribute('fill',bg);
+    clone.insertBefore(rect,clone.firstChild);
+    const data=new XMLSerializer().serializeToString(clone);
+    const blob=new Blob([data],{type:'image/svg+xml'});
+    const url=URL.createObjectURL(blob);
+    const img=new Image();
+    img.onload=()=>{
+      const c=document.createElement('canvas');c.width=(bb.width+pad*2)*3;c.height=(bb.height+pad*2)*3;
+      const ctx=c.getContext('2d');ctx.scale(3,3);ctx.drawImage(img,0,0);
+      c.toBlob(b=>{const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=`wordweb-${new Date().toISOString().slice(0,10)}.png`;a.click()});
+      URL.revokeObjectURL(url);
+    };
+    img.src=url;
+  },
+  exportPDF(){
+    const {jsPDF}=window.jspdf;
+    const doc=new jsPDF({orientation:'landscape',unit:'mm',format:'a3'});
+    const bg=this.state.theme==='dark'?'#0a0a0f':'#f5f0eb';
+    doc.setFillColor(bg);doc.rect(0,0,420,297,'F');
+    // Render SVG graph as image into PDF
+    const svgEl=document.getElementById('svg');
+    const clone=svgEl.cloneNode(true);
+    const bb=this.g.node().getBBox();
+    const pad=15;
+    clone.setAttribute('viewBox',`${bb.x-pad} ${bb.y-pad} ${bb.width+pad*2} ${bb.height+pad*2}`);
+    clone.setAttribute('width',bb.width+pad*2);clone.setAttribute('height',bb.height+pad*2);
+    clone.setAttribute('xmlns','http://www.w3.org/2000/svg');
+    const cloneG=clone.querySelector('g');
+    if(cloneG) cloneG.removeAttribute('transform');
+    clone.querySelectorAll('.node-label').forEach(el=>{
+      el.style.fill=this.state.theme==='dark'?'#f0f0f5':'#1a1a2e';
+      el.style.fontFamily='Space Grotesk,sans-serif';
+      el.setAttribute('paint-order','stroke');
+      el.setAttribute('stroke',bg);
+      el.setAttribute('stroke-width','3');
+    });
+    const lc2=this.state.theme==='dark'?'rgba(255,255,255,0.18)':'rgba(0,0,0,0.12)';
+    clone.querySelectorAll('.link').forEach(el=>{
+      el.setAttribute('fill','none');
+      el.setAttribute('stroke-linecap','round');
+      if(!el.getAttribute('stroke'))el.setAttribute('stroke',lc2);
+      const op=el.getAttribute('opacity');
+      if(!op||op==='0')el.setAttribute('display','none');
+    });
+    clone.querySelectorAll('.scan-group').forEach(el=>el.remove());
+    // Inline CSS variables for arc labels in export
+    clone.querySelectorAll('rect[fill]').forEach(el=>{
+      const f=el.getAttribute('fill');
+      if(f&&f.includes('var('))el.setAttribute('fill',bg);
+    });
+    const bgRect=document.createElementNS('http://www.w3.org/2000/svg','rect');
+    bgRect.setAttribute('x',bb.x-pad);bgRect.setAttribute('y',bb.y-pad);bgRect.setAttribute('width',bb.width+pad*2);bgRect.setAttribute('height',bb.height+pad*2);bgRect.setAttribute('fill',bg);
+    clone.insertBefore(bgRect,clone.firstChild);
+    const svgData=new XMLSerializer().serializeToString(clone);
+    const svgBlob=new Blob([svgData],{type:'image/svg+xml;charset=utf-8'});
+    const url=URL.createObjectURL(svgBlob);
+    const img=new Image();
+    img.onload=()=>{
+      const canvas=document.createElement('canvas');
+      const scale=2;
+      canvas.width=(bb.width+pad*2)*scale;canvas.height=(bb.height+pad*2)*scale;
+      const ctx=canvas.getContext('2d');ctx.scale(scale,scale);
+      ctx.drawImage(img,0,0,bb.width+pad*2,bb.height+pad*2);
+      const imgData=canvas.toDataURL('image/png');
+      const pageW=420,pageH=297,margin=6;
+      const availW=pageW-margin*2,availH=pageH-margin*2-8;
+      const imgAspect=(bb.width+pad*2)/(bb.height+pad*2);
+      let w,h;
+      if(imgAspect>availW/availH){w=availW;h=w/imgAspect}else{h=availH;w=h*imgAspect}
+      const x=margin+(availW-w)/2,y=margin+6+(availH-h)/2;
+      doc.setFont('helvetica','bold');doc.setFontSize(11);
+      doc.setTextColor(this.state.theme==='dark'?'#f0f0f5':'#1a1a2e');
+      doc.text('Wordweb — Design Academy Eindhoven',margin+2,margin+4);
+      doc.addImage(imgData,'PNG',x,y,w,h);
+      doc.save(`wordweb-${new Date().toISOString().slice(0,10)}.pdf`);
+      URL.revokeObjectURL(url);
+    };
+    img.src=url;
+  },
+
+  // === ADD NODE ===
+  openAdd(){document.getElementById('addModal').classList.add('show')},
+  closeAdd(){document.getElementById('addModal').classList.remove('show')},
+  addNode(){
+    const title=document.getElementById('aTitle').value.trim();
+    const type=document.getElementById('aType').value;
+    if(!title){alert('Title required.');return}
+    const id=type.charAt(0)+'-'+title.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/-+$/,'');
+    if(NODES.find(n=>n.id===id)){alert('Already exists.');return}
+    const n={id,type,title,desc:document.getElementById('aDesc').value.trim(),tags:document.getElementById('aTags').value.split(',').map(t=>t.trim().toLowerCase()).filter(Boolean),year:+document.getElementById('aYear').value||0,sem:+document.getElementById('aSem').value||0,course:document.getElementById('aCourse').value.trim(),dept:document.getElementById('aDept').value,mat:document.getElementById('aMat').value,disc:document.getElementById('aDisc').value,skill:document.getElementById('aSkill').value};
+    NODES.push(n);
+    this.buildGraph();this.setFilter(this.state.filter);this.initSearch();this.stats();this.closeAdd();
+    document.getElementById('aTitle').value='';document.getElementById('aDesc').value='';document.getElementById('aTags').value='';document.getElementById('aCourse').value='';
+    setTimeout(()=>this.focusNode(n.id),400);
+  },
+
+  // === UTILS ===
+  stats(){
+    document.getElementById('sN').textContent=this.nodes.length;
+    document.getElementById('sE').textContent=this.links.filter(l=>l.weight>=this.state.threshold).length;
+    const gs=new Set();this.nodes.forEach(n=>gs.add(n.group));
+    document.getElementById('sG').textContent=gs.size;
+  },
+  shuffle(a){const b=[...a];for(let i=b.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[b[i],b[j]]=[b[j],b[i]]}return b},
+
+  // === UI BINDINGS ===
+  bindUI(){
+    let st;document.getElementById('searchIn').addEventListener('input',e=>{clearTimeout(st);st=setTimeout(()=>this.search(e.target.value),120)});
+    document.getElementById('searchIn').addEventListener('keydown',e=>{if(e.key==='Escape'){e.target.value='';this.search('')}});
+    document.addEventListener('click',e=>{if(!e.target.closest('.search-wrap'))document.getElementById('searchRes').classList.remove('show')});
+    document.getElementById('sbToggle').addEventListener('click',()=>document.getElementById('sidebar').classList.toggle('hide'));
+    document.getElementById('themeBtn').addEventListener('click',()=>this.toggleTheme());
+    document.getElementById('layoutBtn').addEventListener('click',()=>this.toggleLayout());
+    document.getElementById('centerBtn').addEventListener('click',()=>this.centerView());
+    document.getElementById('fitBtn').addEventListener('click',()=>this.fitView());
+    document.getElementById('resetBtn').addEventListener('click',()=>{
+      this.svg.transition().duration(500).call(this.zoom.transform,d3.zoomIdentity);
+      this.nodes.forEach(d=>{d.fx=null;d.fy=null});
+      this.state.layout='physics';
+      document.getElementById('layIco').textContent='⚡';
+      document.getElementById('layLbl').textContent='Physics';
+      this.morphToPhysics();
+    });
+    const eb=document.getElementById('expBtn'),em=document.getElementById('expMenu');
+    eb.addEventListener('click',e=>{e.stopPropagation();em.classList.toggle('show')});
+    document.addEventListener('click',e=>{if(!e.target.closest('.dd'))em.classList.remove('show')});
+    document.getElementById('thrSlider').addEventListener('input',e=>{
+      this.state.threshold=+e.target.value;
+      document.getElementById('thrVal').textContent=this.state.threshold;
+      this.linkSel.transition().duration(300).attr('opacity',d=>d.weight<this.state.threshold?0:Math.min(0.3+d.weight*0.06,0.55));
+      this.stats();
+    });
+    document.getElementById('addModal').addEventListener('click',e=>{if(e.target.classList.contains('modal-bg'))this.closeAdd()});
+    document.addEventListener('keydown',e=>{
+      if(e.key==='/'&&!e.target.closest('input,textarea,select')){e.preventDefault();document.getElementById('searchIn').focus()}
+      if(e.key==='Escape'){this.closeAdd();this.closeDetail()}
+      if(this.state.layout==='cluster'&&!e.target.closest('input,textarea,select')){
+        if(e.key==='ArrowLeft'){e.preventDefault();this._stepNode(-1)}
+        if(e.key==='ArrowRight'){e.preventDefault();this._stepNode(1)}
+        if(e.key==='Enter'&&this._highlightedNodeId){e.preventDefault();this.showDetail(this._highlightedNodeId)}
+      }
+    });
+    // Resize
+    window.addEventListener('resize',()=>{
+      const a=document.getElementById('graphArea');
+      this.width=a.clientWidth;this.height=a.clientHeight;
+      this.cx=this.width/2;this.cy=this.height/2;
+      this.R=Math.min(this.width,this.height)*0.38;
+      if(this.state.layout==='cluster'){
+        this._computeRadialTargets();
+        this.nodes.forEach(d=>{d.fx=d._tx;d.fy=d._ty});
+      } else {
+        this.sim.force('center',d3.forceCenter(this.cx,this.cy).strength(0.04));
+      }
+      this.sim.alpha(0.2).restart();
+    });
+  },
+};
+
+document.addEventListener('DOMContentLoaded',()=>{
+  // Access code gate
+  const CODE='2804';
+  if(sessionStorage.getItem('ww-auth')==='1'){
+    document.getElementById('lockScreen').style.display='none';
+    document.getElementById('appWrap').style.display='';
+    if(!localStorage.getItem('ww-qs-hide')){
+      document.getElementById('qsOverlay').classList.add('show');
+    }
+    W.init();
+    _bindQS();
+    return;
+  }
+  const digits=[0,1,2,3].map(i=>document.getElementById('ld'+i));
+  digits[0].focus();
+  digits.forEach((d,i)=>{
+    d.addEventListener('input',()=>{
+      d.value=d.value.replace(/[^0-9]/g,'').slice(-1);
+      if(d.value&&i<3)digits[i+1].focus();
+    });
+    d.addEventListener('keydown',e=>{
+      if(e.key==='Backspace'&&!d.value&&i>0){digits[i-1].focus();digits[i-1].value='';e.preventDefault()}
+      if(e.key==='Enter')document.getElementById('lockBtn').click();
+    });
+    d.addEventListener('paste',e=>{
+      e.preventDefault();
+      const txt=(e.clipboardData||window.clipboardData).getData('text').replace(/[^0-9]/g,'').slice(0,4);
+      txt.split('').forEach((c,j)=>{if(digits[j])digits[j].value=c});
+      if(txt.length>=4)document.getElementById('lockBtn').click();
+    });
+  });
+  document.getElementById('lockBtn').addEventListener('click',()=>{
+    const val=digits.map(d=>d.value).join('');
+    if(val===CODE){
+      sessionStorage.setItem('ww-auth','1');
+      document.getElementById('lockScreen').classList.add('unlocked');
+      document.getElementById('appWrap').style.display='';
+      setTimeout(()=>{
+        document.getElementById('lockScreen').style.display='none';
+        W.init();
+        if(!localStorage.getItem('ww-qs-hide')){
+          document.getElementById('qsOverlay').classList.add('show');
+        }
+        _bindQS();
+      },500);
+    } else {
+      document.getElementById('lockErr').textContent='Onjuiste code';
+      digits.forEach(d=>{d.classList.add('wrong');d.value=''});
+      digits[0].focus();
+      setTimeout(()=>{digits.forEach(d=>d.classList.remove('wrong'));document.getElementById('lockErr').textContent=''},1500);
+    }
+  });
+  function _bindQS(){
+    document.getElementById('qsStart').addEventListener('click',()=>{document.getElementById('qsOverlay').classList.remove('show')});
+    document.getElementById('qsSkip').addEventListener('click',()=>{localStorage.setItem('ww-qs-hide','1');document.getElementById('qsOverlay').classList.remove('show')});
+    document.getElementById('qsOverlay').addEventListener('click',e=>{if(e.target===e.currentTarget)document.getElementById('qsOverlay').classList.remove('show')});
+  }
+});
+</script>
+</body>
+</html>
