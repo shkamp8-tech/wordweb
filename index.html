@@ -483,12 +483,14 @@ const W={
     // Drag — with cluster mode snap-to-radius behavior
     const drag=d3.drag()
       .on('start',(e,d)=>{
+        this._dragging=true;
         if(!e.active) this.sim.alphaTarget(0.08).restart();
         d.fx=d.x;d.fy=d.y;
         if(this.state.layout==='cluster') d._origPos={x:d._radialX||d._tx||d.x,y:d._radialY||d._ty||d.y};
       })
       .on('drag',(e,d)=>{d.fx=e.x;d.fy=e.y})
       .on('end',(e,d)=>{
+        this._dragging=false;
         if(!e.active) this.sim.alphaTarget(0);
         if(this.state.layout==='cluster'){
           const dx=e.x-this.cx,dy=e.y-this.cy;
@@ -512,6 +514,7 @@ const W={
     const tip=document.getElementById('tip'),tipT=document.getElementById('tipT'),tipY=document.getElementById('tipY'),tipD=document.getElementById('tipD');
     this.nodeSel
       .on('mouseenter',(e,d)=>{
+        if(this._dragging) return;
         tipT.textContent=d.title;
         tipY.textContent=d.type.toUpperCase()+(d.course?' — '+d.course:'');
         tipD.textContent=d.desc?d.desc.substring(0,120)+(d.desc.length>120?'…':''):'';
@@ -544,6 +547,7 @@ const W={
       })
       .on('mousemove',(e)=>{tip.style.left=(e.clientX+14)+'px';tip.style.top=(e.clientY+14)+'px'})
       .on('mouseleave',(e,d)=>{
+        if(this._dragging) return;
         tip.classList.remove('show');
         this.nodeSel.select('circle').transition().duration(200).attr('fill-opacity',1).attr('stroke-opacity',0.4);
         this.nodeSel.select('text').transition().duration(200).attr('opacity',1);
