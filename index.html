@@ -485,7 +485,7 @@ const W={
       .on('start',(e,d)=>{
         if(!e.active) this.sim.alphaTarget(0.08).restart();
         d.fx=d.x;d.fy=d.y;
-        if(this.state.layout==='cluster') d._origPos={x:d._tx||d.x,y:d._ty||d.y};
+        if(this.state.layout==='cluster') d._origPos={x:d._radialX||d._tx||d.x,y:d._radialY||d._ty||d.y};
       })
       .on('drag',(e,d)=>{d.fx=e.x;d.fy=e.y})
       .on('end',(e,d)=>{
@@ -611,7 +611,7 @@ const W={
             const extra=this.state.filter.startsWith('th-')?14:6;
             return (angle>90||angle<-90)?-(d.r+extra):(d.r+extra);
           }).attr('dy','0.35em'
-          ).attr('font-size',d=>d.type==='project'?9:7
+          ).attr('font-size',7
           ).attr('opacity',d=>{
             if(this.state.filter.startsWith('th-')&&d.type==='project') return 0.5;
             return 1;
@@ -620,7 +620,7 @@ const W={
           // Physics: beside-dot labels
           this.nodeSel.attr('transform',d=>`translate(${d.x},${d.y})`);
           this.nodeSel.select('text').attr('text-anchor','start').attr('dx',d=>d.dr+5).attr('dy',3)
-            .attr('font-size',d=>d.type==='project'?10:8);
+            .attr('font-size',8);
         }
         // Update group hull overlays in physics mode
         if(this.state.layout==='physics'&&this.state.filter!=='none') this.updateGroupOverlays();
@@ -918,6 +918,8 @@ const W={
         const angle=currentAngle+groupArc*((j+0.5)/arr.length);
         d._tx=this.cx+ringR*Math.cos(angle);
         d._ty=this.cy+ringR*Math.sin(angle);
+        d._radialX=d._tx;
+        d._radialY=d._ty;
       });
       currentAngle+=groupArc+gapAngle;
     });
