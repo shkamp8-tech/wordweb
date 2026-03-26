@@ -1028,9 +1028,6 @@ const W={
     if(this.arcLabelGroup) this.arcLabelGroup.selectAll('*').transition().duration(300).attr('opacity',0).remove();
   },
 
-
-  },
-
   // Cluster mode: draw group names as curved text on a circle
   // HORIZONTAL split: top half (above center) → inward, bottom half (below center) → outward
   updateArcLabels(){
@@ -1787,7 +1784,7 @@ document.addEventListener('DOMContentLoaded',()=>{
         _bindQS();
       },500);
     } else {
-      document.getElementById('lockErr').textContent='Onjuiste code';
+      document.getElementById('lockErr').textContent='Incorrect code';
       digits.forEach(d=>{d.classList.add('wrong');d.value=''});
       digits[0].focus();
       setTimeout(()=>{digits.forEach(d=>d.classList.remove('wrong'));document.getElementById('lockErr').textContent=''},1500);
