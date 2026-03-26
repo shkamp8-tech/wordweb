@@ -473,8 +473,8 @@ const W={
       .attr('dy',3)
       .attr('text-anchor','start')
       .attr('dx',d=>d.dr+5)
-      .attr('font-size',d=>d.type==='project'?10:8)
-      .attr('font-weight',d=>d.type==='project'?600:400)
+      .attr('font-size',8)
+      .attr('font-weight',400)
       .text(d=>{
         let t=d.type==='question'?'? '+d.title:d.title;
         return t.length>22?t.slice(0,21)+'…':t;
@@ -493,7 +493,8 @@ const W={
         if(this.state.layout==='cluster'){
           const dx=e.x-this.cx,dy=e.y-this.cy;
           const dist=Math.sqrt(dx*dx+dy*dy);
-          if(dist>=this.R*0.2&&dist<=this.R*1.4){
+          const ringR=this.state.filter&&this.state.filter.startsWith('th-')?this.R*1.25:this.R;
+          if(dist<=ringR*1.15){
             d.fx=e.x;d.fy=e.y;d._tx=e.x;d._ty=e.y;
           } else {
             const ox=d._origPos.x,oy=d._origPos.y;
@@ -1048,7 +1049,7 @@ const W={
     const fontSize=isThematic?10:8.5;
     const visibleArcs=this._groupArcs.filter(g=>g.name!=='_projects');
     // Desired visual distance from center — far enough to avoid topic word conflicts
-    const labelDist=isThematic?ringR+140:ringR+80;
+    const labelDist=isThematic?ringR+140:ringR+140;
     // Compensate so top and bottom text centers align at the same distance
     const baselineShift=fontSize*0.35;
     const topPathR=labelDist-baselineShift;    // CW: text on outside → appears at labelDist
