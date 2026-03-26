@@ -1013,8 +1013,8 @@ const W={
     const labels=this.hullGroup.selectAll('.group-label').data(labelData,d=>d.name);
     labels.exit().transition().duration(300).attr('opacity',0).remove();
     labels.enter().append('text').attr('class','group-label')
-      .attr('text-anchor','middle').attr('font-size',11).attr('font-weight',700)
-      .attr('font-family','Syne, sans-serif').attr('opacity',0)
+      .attr('text-anchor','middle').attr('font-size',11).attr('font-weight',400)
+      .attr('font-family','Inter, sans-serif').attr('opacity',0)
       .attr('paint-order','stroke').attr('stroke','var(--bg)').attr('stroke-width',4)
       .merge(labels)
       .attr('x',d=>d.x).attr('y',d=>d.y).attr('fill',d=>d.color)
@@ -1058,13 +1058,6 @@ const W={
       const grp=this.arcLabelGroup.append('g');
       const midAngle=(g.startAngle+g.endAngle)/2;
 
-      // 1) Colored arc band
-      grp.append('path')
-        .attr('d',bandArc({startAngle:g.startAngle+Math.PI/2,endAngle:g.endAngle+Math.PI/2}))
-        .attr('transform',`translate(${this.cx},${this.cy})`)
-        .attr('fill',g.color).attr('opacity',isThematic?0.45:0.2)
-        .attr('stroke','none');
-
 
 
       // 3) HORIZONTAL split: sin(midAngle) > 0 means below center in SVG
@@ -1103,12 +1096,6 @@ const W={
         .attr('startOffset','50%')
         .attr('text-anchor','middle')
         .text(g.name);
-
-      // Small dot at arc band midpoint
-      grp.append('circle')
-        .attr('cx',this.cx+(arcOuter+1)*Math.cos(midAngle))
-        .attr('cy',this.cy+(arcOuter+1)*Math.sin(midAngle))
-        .attr('r',2).attr('fill',g.color).attr('opacity',0.6);
     });
 
     // Fade in
