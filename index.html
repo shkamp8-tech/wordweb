@@ -67,8 +67,9 @@ html,body{height:100%;overflow:hidden;font-family:'Space Grotesk',sans-serif;bac
 .stats{display:flex;gap:10px;padding:8px 0}
 .stat{text-align:center;flex:1}.stat-n{font-family:'Syne';font-weight:800;font-size:18px;color:var(--accent)}.stat-l{font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px}
 .slider-g{margin-top:8px}.slider-l{font-size:11px;color:var(--text2);margin-bottom:4px;display:flex;justify-content:space-between}
-.slider{width:100%;-webkit-appearance:none;appearance:none;height:3px;background:var(--bg3);border-radius:2px;outline:none}
-.slider::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:14px;height:14px;background:var(--accent);border-radius:50%;cursor:pointer;box-shadow:0 0 6px var(--glow)}
+.slider{width:100%;-webkit-appearance:none;appearance:none;height:6px;background:var(--bg3);border-radius:3px;outline:none}
+.slider::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:22px;height:22px;background:var(--accent);border-radius:50%;cursor:pointer;box-shadow:0 0 6px var(--glow)}
+.slider::-moz-range-thumb{width:22px;height:22px;background:var(--accent);border-radius:50%;cursor:pointer;box-shadow:0 0 6px var(--glow);border:none}
 .smart-info{margin-top:10px;padding:10px;background:var(--bg3);border-radius:8px;border:1px solid var(--border);font-size:11px;line-height:1.4;color:var(--text2);display:none}
 .smart-info.show{display:block;animation:fadeIn .2s ease}
 .smart-info h4{font-family:'Syne';font-weight:700;font-size:12px;color:var(--text);margin-bottom:5px}
@@ -370,7 +371,7 @@ _KW.forEach(w=>{const t=w.toLowerCase().replace(/\s+/g,'-');NODES.push({id:'t-'+
 // ============================================================
 const W={
   sim:null, svg:null, g:null, nodes:[], links:[], zoom:null,
-  state:{filter:'none',layout:'physics',theme:localStorage.getItem('ww-theme')||'dark',threshold:1,selected:null,smartGroups:null},
+  state:{filter:'none',layout:'cluster',theme:localStorage.getItem('ww-theme')||'dark',threshold:1,selected:null,smartGroups:null},
   width:0, height:0,
 
   init(){
@@ -381,6 +382,14 @@ const W={
     this.bindUI();
 
     this.stats();
+    // Default: cluster layout with all themes
+    document.getElementById('layIco').textContent='📌';
+    document.getElementById('layLbl').textContent='Cluster';
+    // Apply thematic coloring first, then morph to cluster ring
+    this.state.filter='th-all';
+    document.querySelectorAll('.f-btn').forEach(b=>b.classList.remove('on'));
+    document.querySelector('[data-f="th-all"]').classList.add('on');
+    this.applyThematicFilter('th-all');
   },
 
   // === BUILD D3 FORCE GRAPH (Obsidian-style) ===
