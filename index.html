@@ -528,9 +528,9 @@ const W={
           if(t===d.id&&l.weight>=this.state.threshold) conn.add(s);
         });
         conn.add(d.id);
-        this.nodeSel.select('circle').interrupt('hover').transition('hover').duration(150).attr('fill-opacity',n=>conn.has(n.id)?1:0.15).attr('stroke-opacity',n=>conn.has(n.id)?0.8:0.05);
-        this.nodeSel.select('text').interrupt('hover').transition('hover').duration(150).attr('opacity',n=>conn.has(n.id)?1:0.08);
-        this.linkSel.interrupt('hover').transition('hover').duration(150).attr('opacity',l=>{
+        this.nodeSel.select('circle').interrupt('hfade').transition('hfade').duration(150).attr('fill-opacity',n=>conn.has(n.id)?1:0.15).attr('stroke-opacity',n=>conn.has(n.id)?0.8:0.05);
+        this.nodeSel.select('text').interrupt('hfade').transition('hfade').duration(150).attr('opacity',n=>conn.has(n.id)?1:0.08);
+        this.linkSel.interrupt('hfade').transition('hfade').duration(150).attr('opacity',l=>{
           const s=typeof l.source==='object'?l.source.id:l.source;
           const t=typeof l.target==='object'?l.target.id:l.target;
           return (s===d.id||t===d.id)&&l.weight>=this.state.threshold?0.6:0.03;
@@ -543,19 +543,19 @@ const W={
           const t=typeof l.target==='object'?l.target.id:l.target;
           return (s===d.id||t===d.id)&&l.weight>=this.state.threshold?Math.min(2+l.weight*0.6,4.5):Math.min(0.8+l.weight*0.4,3);
         });
-        d3.select(e.currentTarget).select('circle').interrupt('hover').transition('hover').duration(200).attr('r',d=>this.state.layout==='cluster'?d.r*1.4:d.dr*2).attr('stroke-width',3);
+        d3.select(e.currentTarget).select('circle').interrupt('hsize').transition('hsize').duration(200).attr('r',d=>this.state.layout==='cluster'?d.r*1.4:d.dr*2).attr('stroke-width',3);
       })
       .on('mousemove',(e)=>{tip.style.left=(e.clientX+14)+'px';tip.style.top=(e.clientY+14)+'px'})
       .on('mouseleave',(e,d)=>{
         if(this._dragging) return;
         tip.classList.remove('show');
-        this.nodeSel.select('circle').interrupt('hover').transition('hover').duration(200).attr('fill-opacity',1).attr('stroke-opacity',0.4);
-        this.nodeSel.select('text').interrupt('hover').transition('hover').duration(200).attr('opacity',1);
+        this.nodeSel.select('circle').interrupt('hfade').transition('hfade').duration(200).attr('fill-opacity',1).attr('stroke-opacity',0.4);
+        this.nodeSel.select('text').interrupt('hfade').transition('hfade').duration(200).attr('opacity',1);
         const lc=this.state.theme==='dark'?'rgba(255,255,255,0.18)':'rgba(0,0,0,0.12)';
-        this.linkSel.interrupt('hover').transition('hover').duration(200).attr('opacity',l=>l.weight<this.state.threshold?0:Math.min(0.3+l.weight*0.06,0.55))
+        this.linkSel.interrupt('hfade').transition('hfade').duration(200).attr('opacity',l=>l.weight<this.state.threshold?0:Math.min(0.3+l.weight*0.06,0.55))
           .attr('stroke',lc)
           .attr('stroke-width',l=>Math.min(0.8+l.weight*0.4,3));
-        d3.select(e.currentTarget).select('circle').interrupt('hover').transition('hover').duration(200).attr('r',d=>this.state.layout==='cluster'?d.r:d.dr).attr('stroke-width',this.state.layout==='cluster'?2:1.5);
+        d3.select(e.currentTarget).select('circle').interrupt('hsize').transition('hsize').duration(200).attr('r',d=>this.state.layout==='cluster'?d.r:d.dr).attr('stroke-width',this.state.layout==='cluster'?2:1.5);
       })
       .on('click',(e,d)=>{e.stopPropagation();this.showDetail(d.id)});
 
