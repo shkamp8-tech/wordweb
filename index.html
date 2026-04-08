@@ -192,7 +192,6 @@ html,body{height:100%;overflow:hidden;font-family:'Space Grotesk',sans-serif;bac
       <input class="lock-digit" id="ld3" type="tel" maxlength="1" inputmode="numeric" autocomplete="off">
     </div>
     <div class="lock-error" id="lockErr"></div>
-    <button class="lock-enter" id="lockBtn">Unlock</button>
     <div class="lock-hint">Ask the creator for the access code</div>
   </div>
 </div>
@@ -252,7 +251,6 @@ html,body{height:100%;overflow:hidden;font-family:'Space Grotesk',sans-serif;bac
       </div>
       <button class="btn btn-i" id="centerBtn" title="Center view">⊙</button>
       <button class="btn btn-i" id="fitBtn" title="Fit all">⤢</button>
-      <button class="btn" id="resetBtn">⟲ Reset</button>
     </div>
   </header>
 
@@ -311,29 +309,9 @@ html,body{height:100%;overflow:hidden;font-family:'Space Grotesk',sans-serif;bac
   <aside class="detail" id="detailPanel"><div class="detail-inner" id="detailInner"></div></aside>
 </div>
 
-<!-- FAB -->
-<button class="fab" onclick="W.openAdd()">+</button>
-
 <!-- TOOLTIP -->
 <div class="tip" id="tip"><div class="tip-t" id="tipT"></div><div class="tip-y" id="tipY"></div><div class="tip-d" id="tipD"></div></div>
 
-<!-- ADD MODAL -->
-<div class="modal-bg" id="addModal">
-  <div class="modal">
-    <div class="m-head"><span class="m-title">Add Node</span><button class="m-close" onclick="W.closeAdd()">✕</button></div>
-    <div class="m-body">
-      <div class="fg"><label class="fl">Title *</label><input class="fi" id="aTitle"></div>
-      <div class="fg"><label class="fl">Type *</label><select class="fs" id="aType"><option value="project">Project</option><option value="theme">Theme</option><option value="concept">Concept</option><option value="question">Question</option></select></div>
-      <div class="fg"><label class="fl">Description</label><textarea class="ft" id="aDesc"></textarea></div>
-      <div class="fg"><label class="fl">Tags (comma separated)</label><input class="fi" id="aTags"></div>
-      <div class="fr"><div class="fg"><label class="fl">Year</label><select class="fs" id="aYear"><option value="0">N/A</option><option value="1">1</option><option value="2">2</option></select></div><div class="fg"><label class="fl">Semester</label><select class="fs" id="aSem"><option value="0">N/A</option><option value="1">1</option><option value="2">2</option></select></div></div>
-      <div class="fg"><label class="fl">Course</label><input class="fi" id="aCourse"></div>
-      <div class="fr"><div class="fg"><label class="fl">Department</label><select class="fs" id="aDept"><option>Overarching</option><option>Design</option><option>Studio</option><option>Contextual</option><option>Production</option><option>Design &amp; Production</option></select></div><div class="fg"><label class="fl">Material</label><select class="fs" id="aMat"><option>Conceptual</option><option>Physical</option><option>Digital</option><option>Mixed</option></select></div></div>
-      <div class="fr"><div class="fg"><label class="fl">Discipline</label><select class="fs" id="aDisc"><option>Mixed</option><option>2D</option><option>3D</option><option>Time-based</option><option>Text</option></select></div><div class="fg"><label class="fl">Skill</label><select class="fs" id="aSkill"><option>Mixed</option><option>Technical</option><option>Conceptual</option><option>Research</option></select></div></div>
-    </div>
-    <div class="m-foot"><button class="btn" onclick="W.closeAdd()">Cancel</button><button class="btn btn-p" onclick="W.addNode()">Add</button></div>
-  </div>
-</div>
 <input type="file" id="importFile" accept=".json" style="display:none" onchange="W.handleImport(event)">
 
 <script>
@@ -1717,14 +1695,6 @@ const W={
     document.getElementById('layoutBtn').addEventListener('click',()=>this.toggleLayout());
     document.getElementById('centerBtn').addEventListener('click',()=>this.centerView());
     document.getElementById('fitBtn').addEventListener('click',()=>this.fitView());
-    document.getElementById('resetBtn').addEventListener('click',()=>{
-      this.svg.transition().duration(500).call(this.zoom.transform,d3.zoomIdentity);
-      this.nodes.forEach(d=>{d.fx=null;d.fy=null});
-      this.state.layout='physics';
-      document.getElementById('layIco').textContent='⚡';
-      document.getElementById('layLbl').textContent='Physics';
-      this.morphToPhysics();
-    });
     const eb=document.getElementById('expBtn'),em=document.getElementById('expMenu');
     eb.addEventListener('click',e=>{e.stopPropagation();em.classList.toggle('show')});
     document.addEventListener('click',e=>{if(!e.target.closest('.dd'))em.classList.remove('show')});
@@ -1734,10 +1704,9 @@ const W={
       this.linkSel.transition().duration(300).attr('opacity',d=>d.weight<this.state.threshold?0:Math.min(0.3+d.weight*0.06,0.55));
       this.stats();
     });
-    document.getElementById('addModal').addEventListener('click',e=>{if(e.target.classList.contains('modal-bg'))this.closeAdd()});
     document.addEventListener('keydown',e=>{
       if(e.key==='/'&&!e.target.closest('input,textarea,select')){e.preventDefault();document.getElementById('searchIn').focus()}
-      if(e.key==='Escape'){this.closeAdd();this.closeDetail()}
+      if(e.key==='Escape'){this.closeDetail()}
     });
     // Resize
     window.addEventListener('resize',()=>{
@@ -1775,38 +1744,59 @@ document.addEventListener('DOMContentLoaded',()=>{
     d.addEventListener('input',()=>{
       d.value=d.value.replace(/[^0-9]/g,'').slice(-1);
       if(d.value&&i<3)digits[i+1].focus();
+      // Auto-unlock when all 4 digits filled
+      const val=digits.map(x=>x.value).join('');
+      if(val.length===4){
+        if(val===CODE){
+          sessionStorage.setItem('ww-auth','1');
+          document.getElementById('lockScreen').classList.add('unlocked');
+          document.getElementById('appWrap').style.display='';
+          setTimeout(()=>{
+            document.getElementById('lockScreen').style.display='none';
+            W.init();
+            if(!localStorage.getItem('ww-qs-hide')){
+              document.getElementById('qsOverlay').classList.add('show');
+            }
+            _bindQS();
+          },500);
+        } else {
+          document.getElementById('lockErr').textContent='Incorrect code';
+          digits.forEach(x=>{x.classList.add('wrong');x.value=''});
+          digits[0].focus();
+          setTimeout(()=>{digits.forEach(x=>x.classList.remove('wrong'));document.getElementById('lockErr').textContent=''},1500);
+        }
+      }
     });
     d.addEventListener('keydown',e=>{
       if(e.key==='Backspace'&&!d.value&&i>0){digits[i-1].focus();digits[i-1].value='';e.preventDefault()}
-      if(e.key==='Enter')document.getElementById('lockBtn').click();
     });
     d.addEventListener('paste',e=>{
       e.preventDefault();
       const txt=(e.clipboardData||window.clipboardData).getData('text').replace(/[^0-9]/g,'').slice(0,4);
       txt.split('').forEach((c,j)=>{if(digits[j])digits[j].value=c});
-      if(txt.length>=4)document.getElementById('lockBtn').click();
-    });
-  });
-  document.getElementById('lockBtn').addEventListener('click',()=>{
-    const val=digits.map(d=>d.value).join('');
-    if(val===CODE){
-      sessionStorage.setItem('ww-auth','1');
-      document.getElementById('lockScreen').classList.add('unlocked');
-      document.getElementById('appWrap').style.display='';
-      setTimeout(()=>{
-        document.getElementById('lockScreen').style.display='none';
-        W.init();
-        if(!localStorage.getItem('ww-qs-hide')){
-          document.getElementById('qsOverlay').classList.add('show');
+      // Trigger auto-check after paste
+      const val=digits.map(x=>x.value).join('');
+      if(val.length===4){
+        if(val===CODE){
+          sessionStorage.setItem('ww-auth','1');
+          document.getElementById('lockScreen').classList.add('unlocked');
+          document.getElementById('appWrap').style.display='';
+          setTimeout(()=>{
+            document.getElementById('lockScreen').style.display='none';
+            W.init();
+            if(!localStorage.getItem('ww-qs-hide')){
+              document.getElementById('qsOverlay').classList.add('show');
+            }
+            _bindQS();
+          },500);
+        } else {
+          document.getElementById('lockErr').textContent='Incorrect code';
+          digits.forEach(x=>{x.classList.add('wrong');x.value=''});
+          digits[0].focus();
+          setTimeout(()=>{digits.forEach(x=>x.classList.remove('wrong'));document.getElementById('lockErr').textContent=''},1500);
         }
-        _bindQS();
-      },500);
-    } else {
-      document.getElementById('lockErr').textContent='Incorrect code';
-      digits.forEach(d=>{d.classList.add('wrong');d.value=''});
-      digits[0].focus();
-      setTimeout(()=>{digits.forEach(d=>d.classList.remove('wrong'));document.getElementById('lockErr').textContent=''},1500);
-    }
+      }
+    });
   });
   function _bindQS(){
     document.getElementById('qsStart').addEventListener('click',()=>{document.getElementById('qsOverlay').classList.remove('show')});
